@@ -92,16 +92,33 @@ export async function getTrending(mediaType, country) {
 }
 
 // Rows for the home page.
+const buildDiscoveryRows = (country) => {
+  const label = country ? countryName(country) : null
+  const origin = country || undefined
+  return [
+    discoverSource(label ? `Action & Adventure from ${label}` : 'Action & Adventure', 'movie', origin, { with_genres: '28,12', sort_by: 'popularity.desc' }),
+    discoverSource(label ? `Comedy from ${label}` : 'Comedy Hits', 'movie', origin, { with_genres: '35', sort_by: 'popularity.desc' }),
+    discoverSource(label ? `Crime & Mystery from ${label}` : 'Crime & Mystery', 'tv', origin, { with_genres: '80,9648', sort_by: 'popularity.desc' }),
+    discoverSource(label ? `Sci-Fi & Fantasy from ${label}` : 'Sci-Fi & Fantasy', 'movie', origin, { with_genres: '878,14', sort_by: 'popularity.desc' }),
+    discoverSource(label ? `Animation from ${label}` : 'Animation & Anime', 'tv', origin || 'JP', { with_genres: '16', sort_by: 'popularity.desc' }),
+    discoverSource(label ? `Family from ${label}` : 'Family Night', 'movie', origin, { with_genres: '10751', sort_by: 'popularity.desc' }),
+    discoverSource(label ? `Documentaries from ${label}` : 'Documentaries', 'movie', origin, { with_genres: '99', sort_by: 'popularity.desc' }),
+    discoverSource(label ? `Romance from ${label}` : 'Romance', 'movie', origin, { with_genres: '10749', sort_by: 'popularity.desc' }),
+    discoverSource('Indian Cinema', 'movie', 'IN', { sort_by: 'popularity.desc' }),
+    discoverSource('Indian Series', 'tv', 'IN', { sort_by: 'popularity.desc' }),
+  ]
+}
+
 export const ROW_SOURCES = [
   trendingSource('Trending Now'),
   pathSource('Popular Movies', requests.popularMovies),
   pathSource('Top Rated', requests.topRatedMovies),
   pathSource('Popular Series', requests.popularTv),
   pathSource('Now Playing', requests.nowPlaying),
+  ...buildDiscoveryRows(''),
 ]
 
-// Country-filtered variants replace the global rows entirely when a
-// country is selected (trending can't be region-filtered on TMDB).
+// Country-specific popular rows remain first, followed by genre collections.
 export function getRowSources(country) {
   if (!country) return ROW_SOURCES
   const name = countryName(country)
@@ -111,6 +128,7 @@ export function getRowSources(country) {
     discoverSource(`Top Rated Movies from ${name}`, 'movie', country, { sort_by: 'vote_average.desc', 'vote_count.gte': 200 }),
     discoverSource(`Popular Series from ${name}`, 'tv', country, { sort_by: 'popularity.desc' }),
     discoverSource(`Top Rated Series from ${name}`, 'tv', country, { sort_by: 'vote_average.desc', 'vote_count.gte': 100 }),
+    ...buildDiscoveryRows(country),
   ]
 }
 
@@ -204,12 +222,28 @@ export async function getGenreTitles(genreId, page = 1) {
 
 export async function searchMedia(query, page = 1) {
   if (!hasApiKey()) return mockSearch(query)
-  const [movies, shows] = await Promise.all([
-    api.list(requests.searchMovie, { query, page, include_adult: false }, { includeUnrated: true }),
-    api.list(requests.searchTv, { query, page, include_adult: false }, { includeUnrated: true }),
-  ])
-  const all = [...movies.map((m) => normalizeMedia(m, 'movie')), ...shows.map((s) => normalizeMedia(s, 'tv'))]
-  return sortByPopularity(uniqueByKey(all))
+
+  // One multi-search request covers movies and series, avoids duplicate
+  // round-trips, and discards people results before they reach movie cards.
+  try {
+    const results = await api.list('/search/multi', {
+      query,
+      page,
+      include_adult: false,
+    }, { includeUnrated: true })
+    const titles = results
+      .filter((item) => item.media_type === 'movie' || item.media_type === 'tv')
+      .map((item) => normalizeMedia(item))
+    return sortByPopularity(uniqueByKey(titles))
+  } catch {
+    // Fall back to the separate movie/TV endpoints if multi-search is unavailable.
+    const [movies, shows] = await Promise.all([
+      api.list(requests.searchMovie, { query, page, include_adult: false }, { includeUnrated: true }),
+      api.list(requests.searchTv, { query, page, include_adult: false }, { includeUnrated: true }),
+    ])
+    const all = [...movies.map((m) => normalizeMedia(m, 'movie')), ...shows.map((s) => normalizeMedia(s, 'tv'))]
+    return sortByPopularity(uniqueByKey(all))
+  }
 }
 
 export async function getVideo(mediaType, id) {
