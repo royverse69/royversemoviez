@@ -5,6 +5,7 @@ import {
   getCast,
   getDetails,
   getOmdbDetails,
+  getWatchProviders,
   getRelated,
   getSeasonEpisodes,
   getVideo,
@@ -12,6 +13,7 @@ import {
 import { originalBackdropUrl, posterUrl, stillUrl } from '../api/tmdb.js'
 import { useData } from '../hooks/useData.js'
 import { useLocalStorage } from '../hooks/useLocalStorage.js'
+import { usePreferences } from '../context/PreferencesContext.jsx'
 import { useProvider } from '../context/ProviderContext.jsx'
 import { useApiKey } from '../context/ApiKeyContext.jsx'
 import { useMyList } from '../context/MyListContext.jsx'
@@ -41,6 +43,7 @@ export default function WatchPage() {
   const { providerId, setProvider } = useProvider()
   const { apiKey } = useApiKey()
   const [omdbApiKey] = useLocalStorage('royversemoviez.omdb-api-key', '')
+  const { country } = usePreferences()
   const { has, toggle } = useMyList()
   const { add: addHistory, items: historyItems } = useHistory()
   const { get: getRating, set: setRating } = useRatings()
@@ -61,6 +64,12 @@ export default function WatchPage() {
       ? getOmdbDetails(media.imdbId, omdbApiKey).catch(() => null)
       : Promise.resolve(null),
     [media?.imdbId, omdbApiKey]
+  )
+  const { data: legalProviders } = useData(
+    () => media && country
+      ? getWatchProviders(mediaType, id, country).catch(() => null)
+      : Promise.resolve(null),
+    [mediaType, id, apiKey, country]
   )
   const { data: backdropPaths } = useData(
     () => (id ? getBackdrops(mediaType, id).catch(() => []) : Promise.resolve([])),
@@ -217,6 +226,27 @@ export default function WatchPage() {
             <p className="mt-2 max-w-xl text-sm leading-6 text-cream/85 sm:text-base">
               {media.overview || 'No description available.'}
             </p>
+            {legalProviders?.providers?.length > 0 && (
+              <section className="mt-5 max-w-xl rounded-xl border border-white/10 bg-black/45 p-3 backdrop-blur">
+                <div className="flex items-center justify-between gap-2">
+                  <p className="text-[10px] font-black uppercase tracking-[.16em] text-mist">Watch legally in {country}</p>
+                  {legalProviders.link && (
+                    <a href={legalProviders.link} target="_blank" rel="noreferrer" className="text-[10px] font-bold text-brand hover:text-white">
+                      All options ↗
+                    </a>
+                  )}
+                </div>
+                <div className="mt-2.5 flex flex-wrap gap-2">
+                  {legalProviders.providers.slice(0, 8).map((provider) => (
+                    <span key={provider.provider_id} className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/5 py-1 pl-1 pr-2.5 text-[10px] font-bold text-cream/85">
+                      {provider.logo_path && <img src={`https://image.tmdb.org/t/p/w45${provider.logo_path}`} alt="" className="h-5 w-5 rounded-full object-cover" loading="lazy" />}
+                      {provider.provider_name}
+                    </span>
+                  ))}
+                </div>
+                <p className="mt-2 text-[9px] text-mist/70">Availability data powered by JustWatch via TMDB.</p>
+              </section>
+            )}
             {(media.genres?.length || media.numberOfEpisodes) && (
               <p className="mt-3 text-xs font-semibold text-mist">
                 {[media.genres?.join(' / '), media.numberOfEpisodes ? `${media.numberOfEpisodes} episodes` : null]
