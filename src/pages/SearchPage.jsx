@@ -20,6 +20,7 @@ const MAX_RECENT = 8
 
 export default function SearchPage() {
   const { apiKey } = useApiKey()
+  const [omdbApiKey] = useLocalStorage('royversemoviez.omdb-api-key', '')
   const [searchParams, setSearchParams] = useSearchParams()
   const query = searchParams.get('q') || ''
   const [input, setInput] = useState(query)
@@ -44,7 +45,7 @@ export default function SearchPage() {
     })
   }, [debounced, setRecent])
 
-  const results = useData(() => (debounced ? searchMedia(debounced) : Promise.resolve([])), [debounced, apiKey])
+  const results = useData(() => (debounced ? searchMedia(debounced, 1, { omdbApiKey }) : Promise.resolve([])), [debounced, apiKey, omdbApiKey])
 
   const clearRecent = () => setRecent([])
 
