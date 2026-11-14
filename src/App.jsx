@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom'
 import { ApiKeyProvider } from './context/ApiKeyContext.jsx'
 import { MyListProvider } from './context/MyListContext.jsx'
 import { HistoryProvider } from './context/HistoryContext.jsx'
@@ -23,46 +23,57 @@ import WatchPartyPage from './pages/WatchPartyPage.jsx'
 import WatchPartyRoom from './pages/WatchPartyRoom.jsx'
 import ConsentGate from './components/ConsentGate.jsx'
 
+function AppLayout() {
+  const location = useLocation()
+  const immersive = location.pathname.startsWith('/watch/') || /^\\/party\\/[^/]+/.test(location.pathname)
+
+  return (
+    <>
+      <ScrollToTop />
+      <div className="flex min-h-screen flex-col bg-ink">
+        <Navbar />
+        <main className={`flex-1 ${immersive ? '' : 'pb-[calc(4.5rem+env(safe-area-inset-bottom))] lg:pb-0'}`}>
+          <Routes>
+            <Route path="/" element={<HomePage />} />
+            <Route path="/search" element={<SearchPage />} />
+            <Route path="/movies" element={<MoviesPage />} />
+            <Route path="/series" element={<SeriesPage />} />
+            <Route path="/watch/:type/:id" element={<WatchPage />} />
+            <Route path="/party" element={<WatchPartyPage />} />
+            <Route path="/party/:code" element={<WatchPartyRoom />} />
+            <Route path="/mylist" element={<MyListPage />} />
+            <Route path="/history" element={<HistoryPage />} />
+            <Route path="/settings" element={<SettingsPage />} />
+            <Route path="/genre/:id" element={<GenrePage />} />
+            <Route path="*" element={<HomePage />} />
+          </Routes>
+        </main>
+        {!immersive && <Footer />}
+        <VideoModal />
+      </div>
+    </>
+  )
+}
+
 export default function App() {
   return (
     <BrowserRouter basename={import.meta.env.BASE_URL}>
       <ConsentGate>
-      <ApiKeyProvider>
-        <PreferencesProvider>
-        <MyListProvider>
-          <HistoryProvider>
-          <RatingsProvider>
-          <ProviderProvider>
-          <PlayerProvider>
-            <ScrollToTop />
-            <div className="flex min-h-screen flex-col bg-ink">
-              <Navbar />
-              <main className="flex-1">
-                <Routes>
-                  <Route path="/" element={<HomePage />} />
-                  <Route path="/search" element={<SearchPage />} />
-                  <Route path="/movies" element={<MoviesPage />} />
-                  <Route path="/series" element={<SeriesPage />} />
-                  <Route path="/watch/:type/:id" element={<WatchPage />} />
-                  <Route path="/party" element={<WatchPartyPage />} />
-                  <Route path="/party/:code" element={<WatchPartyRoom />} />
-                  <Route path="/mylist" element={<MyListPage />} />
-                  <Route path="/history" element={<HistoryPage />} />
-                  <Route path="/settings" element={<SettingsPage />} />
-                  <Route path="/genre/:id" element={<GenrePage />} />
-                  <Route path="*" element={<HomePage />} />
-                </Routes>
-              </main>
-              <Footer />
-              <VideoModal />
-            </div>
-          </PlayerProvider>
-          </ProviderProvider>
-          </RatingsProvider>
-          </HistoryProvider>
-        </MyListProvider>
-        </PreferencesProvider>
-      </ApiKeyProvider>
+        <ApiKeyProvider>
+          <PreferencesProvider>
+            <MyListProvider>
+              <HistoryProvider>
+                <RatingsProvider>
+                  <ProviderProvider>
+                    <PlayerProvider>
+                      <AppLayout />
+                    </PlayerProvider>
+                  </ProviderProvider>
+                </RatingsProvider>
+              </HistoryProvider>
+            </MyListProvider>
+          </PreferencesProvider>
+        </ApiKeyProvider>
       </ConsentGate>
     </BrowserRouter>
   )
