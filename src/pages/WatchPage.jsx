@@ -531,6 +531,8 @@ function PlayerView({
   const lastWrittenRef = useRef(null)
   const resumedForRef = useRef(null)
   const [resumeNotice, setResumeNotice] = useState(null)
+  const [fallbackMessage, setFallbackMessage] = useState('')
+  const fallbackAttemptedRef = useRef(new Set())
 
   const contentPlayerUrl = useMemo(
     () => (mode === 'content' ? buildEmbedUrl(providerId, mediaType, id, season, episode) : null),
@@ -541,6 +543,14 @@ function PlayerView({
     playerUrl: contentPlayerUrl,
     active: mode === 'content',
   })
+
+  useEffect(() => {
+    if (mode !== 'content' || providerId !== 'cinesrc' || !bridge.error) return
+    if (fallbackAttemptedRef.current.has(contentPlayerUrl)) return
+    fallbackAttemptedRef.current.add(contentPlayerUrl)
+    setFallbackMessage('CineSrc could not start this title. Switched to the VidCore backup. You can choose another backup in the player menu.')
+    setProvider('vidcore')
+  }, [mode, providerId, bridge.error, contentPlayerUrl, setProvider])
 
   // Resume where the user left off once the player reports telemetry.
   useEffect(() => {
@@ -638,7 +648,7 @@ function PlayerView({
           {mode === 'content' && (
             <select
               value={providerId}
-              onChange={(event) => setProvider(event.target.value)}
+              onChange={(event) => { setFallbackMessage(''); setProvider(event.target.value) }}
               className="rounded-lg border border-white/15 bg-surface px-3 py-2 text-xs font-bold text-white outline-none"
             >
               {PROVIDERS.map((provider) => <option key={provider.id} value={provider.id}>{provider.name}</option>)}
@@ -654,7 +664,12 @@ function PlayerView({
           </button>
         </div>
       </div>
-      <div ref={containerRef} className="relative mx-auto aspect-video w-full max-w-screen-2xl bg-black">
+      {fallbackMessage && (
+        <div className="border-b border-amber-400/20 bg-amber-400/10 px-4 py-2 text-xs font-semibold text-amber-100" role="status">
+          {fallbackMessage}
+        </div>
+      )}
+            <div ref={containerRef} className="relative mx-auto aspect-video w-full max-w-screen-2xl bg-black">
         {resumeNotice != null && (
           <div className="pointer-events-none absolute left-3 top-3 z-10 rounded-full bg-black/70 px-3 py-1.5 text-[10px] font-black uppercase tracking-wider text-white backdrop-blur">
             Resumed from {formatClock(resumeNotice)}
