@@ -185,6 +185,16 @@ export default function WatchPage() {
                   <StarIcon className="h-3.5 w-3.5" /> {media.rating.toFixed(1)}
                 </span>
               )}
+              {media.imdbId && (
+                <a
+                  href={`https://www.imdb.com/title/${media.imdbId}/`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex min-h-7 items-center rounded border border-yellow-400/30 bg-yellow-400/10 px-2 text-[10px] font-black tracking-wide text-yellow-200 transition hover:bg-yellow-400/20"
+                >
+                  IMDb ↗
+                </a>
+              )}
             </div>
 
             <h2 className="mt-7 text-xs font-black uppercase tracking-[0.18em] text-white">About</h2>
