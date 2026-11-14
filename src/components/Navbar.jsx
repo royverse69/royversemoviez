@@ -40,7 +40,7 @@ export default function Navbar() {
           : 'bg-gradient-to-b from-black/70 via-black/20 to-transparent'
       }`}
     >
-      <nav className="mx-auto flex max-w-screen-2xl items-center gap-3 px-3 py-3 sm:gap-6 sm:px-6 lg:px-10">
+      <nav className="mx-auto flex max-w-screen-2xl items-center gap-1.5 px-2 py-2.5 sm:gap-6 sm:px-6 sm:py-3 lg:px-10">
         {/* Brand */}
         <Link
           to="/"
@@ -48,7 +48,7 @@ export default function Navbar() {
           aria-label="RoyverseMoviez home"
         >
           <BrandMark className="h-7 w-7 shrink-0 sm:h-8 sm:w-8" />
-          <span className="whitespace-nowrap text-base font-black tracking-tight sm:text-xl">RoyverseMoviez</span>
+          <span className="whitespace-nowrap text-[clamp(.82rem,3.3vw,1.25rem)] font-black tracking-tight sm:text-xl">RoyverseMoviez</span>
         </Link>
 
         {/* Desktop links */}
@@ -85,7 +85,7 @@ export default function Navbar() {
             className="rounded-full p-2 text-cream/85 transition-colors hover:bg-white/10 hover:text-white"
             aria-label="Search"
           >
-            <SearchIcon className="h-6 w-6" />
+            <SearchIcon className="h-5 w-5 sm:h-6 sm:w-6" />
           </Link>
 
           <Link
@@ -93,7 +93,7 @@ export default function Navbar() {
             className="rounded-full p-2 text-cream/85 transition-colors hover:bg-white/10 hover:text-white"
             aria-label="Settings"
           >
-            <svg className="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+            <svg className="h-5 w-5 sm:h-6 sm:w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
               <circle cx="12" cy="12" r="3" />
               <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.6 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09A1.65 1.65 0 0 0 15 4.6a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
