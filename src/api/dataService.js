@@ -220,30 +220,112 @@ export async function getGenreTitles(genreId, page = 1) {
   return sortByPopularity(uniqueByKey(all))
 }
 
-export async function searchMedia(query, page = 1) {
-  if (!hasApiKey()) return mockSearch(query)
+async function searchOmdbTitles(query, apiKey, page = 1) {
+  if (!apiKey) return []
+  const url = new URL('https://www.omdbapi.com/')
+  url.searchParams.set('apikey', apiKey)
+  url.searchParams.set('s', query)
+  url.searchParams.set('type', 'movie')
+  url.searchParams.set('page', String(page))
+  const response = await fetch(url.toString())
+  if (!response.ok) throw new Error(`OMDb search failed (${response.status})`)
+  const body = await response.json()
+  if (body.Response === 'False') return []
+  return (body.Search || []).map((item) => ({
+    imdbId: item.imdbID,
+    title: item.Title,
+    mediaType: 'movie',
+  })).filter((item) => item.imdbId)
+}
 
-  // One multi-search request covers movies and series, avoids duplicate
-  // round-trips, and discards people results before they reach movie cards.
+async function searchTvmazeTitles(query) {
+  const url = new URL('https://api.tvmaze.com/search/shows')
+  url.searchParams.set('q', query)
+  const response = await fetch(url.toString(), {
+    headers: { 'accept': 'application/json' },
+  })
+  if (!response.ok) throw new Error(`TVmaze search failed (${response.status})`)
+  const body = await response.json()
+  return (body || []).slice(0, 8).map((item) => ({
+    imdbId: item.show?.externals?.imdb,
+    title: item.show?.name,
+    mediaType: 'tv',
+  })).filter((item) => item.imdbId)
+}
+
+async function resolveFallbackTitles(candidates) {
+  const uniqueCandidates = [...new Map(candidates.map((item) => [item.imdbId, item])).values()]
+  const resolved = await Promise.all(uniqueCandidates.slice(0, 10).map(async (candidate) => {
+    try {
+      const found = await api.findByExternalId(candidate.imdbId)
+      const matches = [
+        ...(found.movie_results || []).map((item) => normalizeMedia({ ...item, imdb_id: candidate.imdbId }, 'movie')),
+        ...(found.tv_results || []).map((item) => normalizeMedia({ ...item, imdb_id: candidate.imdbId }, 'tv')),
+      ]
+      return matches
+    } catch {
+      return []
+    }
+  }))
+  return sortByPopularity(uniqueByKey(resolved.flat()))
+}
+
+export async function searchMedia(query, page = 1, { omdbApiKey = '' } = {}) {
+  const cleanQuery = String(query || '').trim()
+  if (!cleanQuery) return []
+  if (!hasApiKey()) return mockSearch(cleanQuery)
+
+  let primaryError
   try {
     const results = await api.list('/search/multi', {
-      query,
+      query: cleanQuery,
       page,
       include_adult: false,
     }, { includeUnrated: true })
     const titles = results
       .filter((item) => item.media_type === 'movie' || item.media_type === 'tv')
       .map((item) => normalizeMedia(item))
-    return sortByPopularity(uniqueByKey(titles))
-  } catch {
-    // Fall back to the separate movie/TV endpoints if multi-search is unavailable.
-    const [movies, shows] = await Promise.all([
-      api.list(requests.searchMovie, { query, page, include_adult: false }, { includeUnrated: true }),
-      api.list(requests.searchTv, { query, page, include_adult: false }, { includeUnrated: true }),
-    ])
-    const all = [...movies.map((m) => normalizeMedia(m, 'movie')), ...shows.map((s) => normalizeMedia(s, 'tv'))]
-    return sortByPopularity(uniqueByKey(all))
+    if (titles.length || !cleanQuery) return sortByPopularity(uniqueByKey(titles))
+  } catch (error) {
+    primaryError = error
   }
+
+  // Same-provider endpoint fallback: multi-search can fail independently of
+  // the movie and TV search endpoints.
+  try {
+    const [movies, shows] = await Promise.all([
+      api.list(requests.searchMovie, { query: cleanQuery, page, include_adult: false }, { includeUnrated: true }),
+      api.list(requests.searchTv, { query: cleanQuery, page, include_adult: false }, { includeUnrated: true }),
+    ])
+    const sameProvider = sortByPopularity(uniqueByKey([
+      ...movies.map((item) => normalizeMedia(item, 'movie')),
+      ...shows.map((item) => normalizeMedia(item, 'tv')),
+    ]))
+    if (sameProvider.length) return sameProvider
+  } catch (error) {
+    primaryError = error
+  }
+
+  // Independent metadata fallbacks. TVmaze is keyless; OMDb is enabled only
+  // when a user supplies their own key. Both expose IMDb IDs, which are
+  // resolved back to TMDB IDs so the existing title/player route stays valid.
+  const [tvmazeResult, omdbResult] = await Promise.allSettled([
+    searchTvmazeTitles(cleanQuery),
+    searchOmdbTitles(cleanQuery, omdbApiKey, page),
+  ])
+  const fallbackCandidates = [
+    ...(tvmazeResult.status === 'fulfilled' ? tvmazeResult.value : []),
+    ...(omdbResult.status === 'fulfilled' ? omdbResult.value : []),
+  ]
+  const fallbackTitles = await resolveFallbackTitles(fallbackCandidates)
+  if (fallbackTitles.length) return fallbackTitles
+
+  const fallbackErrors = [tvmazeResult, omdbResult]
+    .filter((result) => result.status === 'rejected')
+    .map((result) => result.reason?.message)
+    .filter(Boolean)
+  const detail = fallbackErrors.length ? ` Metadata fallbacks: ${fallbackErrors.join('; ')}.` : ''
+  throw new Error(`TMDB search is temporarily unavailable and no fallback result could be resolved to a playable TMDB title.${detail} ${primaryError?.message || ''}`.trim())
 }
 
 export async function getVideo(mediaType, id) {
