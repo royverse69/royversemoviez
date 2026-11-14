@@ -4,12 +4,10 @@ import { useProvider } from '../context/ProviderContext.jsx'
 
 export default function PlayerEmbed({ mediaType, id, season = 1, episode = 1, title, className = '', iframeRef }) {
   const { providerId } = useProvider()
-  const src = useMemo(() => {
-    const url = new URL(buildEmbedUrl(providerId, mediaType, id, season, episode))
-    // Only the dedicated Watch page hides provider controls; it supplies its own control bar.
-    if (providerId === 'cinesrc') url.searchParams.set('controls', 'false')
-    return url.toString()
-  }, [providerId, mediaType, id, season, episode])
+  const src = useMemo(
+    () => buildEmbedUrl(providerId, mediaType, id, season, episode),
+    [providerId, mediaType, id, season, episode]
+  )
 
   return (
     <iframe
@@ -18,11 +16,8 @@ export default function PlayerEmbed({ mediaType, id, season = 1, episode = 1, ti
       src={src}
       title={title || 'Video player'}
       className={`absolute inset-0 h-full w-full border-0 bg-black ${className}`}
-      allow="autoplay; fullscreen; picture-in-picture; encrypted-media"
+      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
       allowFullScreen
-      sandbox="allow-scripts allow-same-origin allow-forms allow-presentation"
-      referrerPolicy="strict-origin"
-      loading="eager"
     />
   )
 }
