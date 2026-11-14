@@ -29,10 +29,10 @@ export default function MovieCard({ media, size = 'md', fill = false, getPath, p
       role="button"
       tabIndex={0}
       aria-label={media.title}
-      style={fill ? undefined : { width: size === 'lg' ? 300 : 230 }}
+      style={fill ? undefined : { width: size === 'lg' ? 'clamp(150px, 22vw, 250px)' : 'clamp(112px, 28vw, 184px)' }}
     >
       <div
-        className="relative aspect-[2/3] overflow-hidden rounded-lg bg-surface-light shadow-lg shadow-black/40 ring-1 ring-white/10 transition-all duration-300 ease-out group-hover:shadow-2xl group-hover:shadow-black/60 group-hover:ring-white/25"
+        className="relative aspect-[2/3] overflow-hidden rounded-xl bg-surface-light shadow-lg shadow-black/40 ring-1 ring-white/10 transition-all duration-300 ease-out group-hover:shadow-2xl group-hover:shadow-black/60 group-hover:ring-white/25"
       >
         <img
           src={src}
