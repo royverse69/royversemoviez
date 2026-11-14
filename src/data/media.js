@@ -7,6 +7,7 @@ export function normalizeMedia(item, forcedType) {
   const date = item.release_date || item.first_air_date || ''
   return {
     id: item.id,
+    imdbId: item.imdb_id || item.external_ids?.imdb_id || null,
     key: `${mediaType}-${item.id}`,
     mediaType,
     title,
