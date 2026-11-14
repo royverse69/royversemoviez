@@ -637,11 +637,11 @@ function PlayerView({
 
   return (
     <div className="min-h-screen bg-ink pt-16">
-      <div className="flex min-h-16 items-center justify-between border-b border-white/10 bg-ink px-4 sm:px-6 lg:px-10">
+      <div className="flex min-h-14 flex-wrap items-center justify-between gap-2 border-b border-white/10 bg-ink px-3 py-2 sm:min-h-16 sm:px-6 lg:px-10">
         <button onClick={onClose} className="inline-flex items-center gap-1 text-sm font-bold text-cream/80 hover:text-white">
           <ChevronLeftIcon className="h-5 w-5" /> Back to details
         </button>
-        <p className="line-clamp-1 px-4 text-xs font-bold uppercase tracking-wider text-mist">
+        <p className="min-w-0 flex-1 truncate px-2 text-[10px] font-bold uppercase tracking-wider text-mist sm:text-xs">
           {mode === 'trailer' ? `${media.title} trailer` : mediaType === 'tv' ? `${media.title} · S${season} E${episode}` : media.title}
         </p>
         <div className="flex items-center gap-2">
@@ -649,7 +649,7 @@ function PlayerView({
             <select
               value={providerId}
               onChange={(event) => { setFallbackMessage(''); setProvider(event.target.value) }}
-              className="rounded-lg border border-white/15 bg-surface px-3 py-2 text-xs font-bold text-white outline-none"
+              className="max-w-[44vw] rounded-lg border border-white/15 bg-surface px-2 py-2 text-xs font-bold text-white outline-none sm:max-w-none sm:px-3"
             >
               {PROVIDERS.map((provider) => <option key={provider.id} value={provider.id}>{provider.name}</option>)}
             </select>
