@@ -1,12 +1,17 @@
 {
-  "name": "RoyverseMoviez \u2014 Movies & Series",
-  "short_name": "RoyverseMoviez",
-  "description": "Discover movies and series with RoyverseMoviez, made by AshutoshRoy.",
+  "name": "RoyverseMoviez — Movies & Series",
+  "short_name": "Royverse",
+  "description": "Discover movies and series on RoyverseMoviez.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
+  "orientation": "any",
   "background_color": "#0a0a0a",
-  "theme_color": "#0a0a0a",
+  "theme_color": "#e50914",
+  "categories": [
+    "entertainment",
+    "video"
+  ],
   "icons": [
     {
       "src": "./favicon.svg",
