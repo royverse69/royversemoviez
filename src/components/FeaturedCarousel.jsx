@@ -37,8 +37,28 @@ export default function FeaturedCarousel({ items, label }) {
 
   return (
     <section
-      className="relative z-30 min-h-[70vh] w-full overflow-hidden sm:min-h-[88vh]"
+      className="relative z-30 h-[68svh] min-h-[550px] max-h-[760px] w-full overflow-hidden sm:h-[84svh] sm:min-h-[680px] sm:max-h-[900px]"
     >
+      <div className="no-scrollbar absolute inset-x-0 top-[4.35rem] z-40 flex gap-2 overflow-x-auto px-3 sm:hidden">
+        {[
+          { label: 'Trending', path: '/' },
+          { label: 'Movies', path: '/movies' },
+          { label: 'Series', path: '/series' },
+          { label: 'My List', path: '/mylist' },
+          { label: 'Watch Party', path: '/party' },
+        ].map((item, index) => (
+          <button
+            key={item.label}
+            onClick={() => navigate(item.path)}
+            className={`shrink-0 rounded-full border px-3.5 py-2 text-[10px] font-black shadow-lg backdrop-blur-md transition ${
+              index === 0 ? 'border-white/70 bg-white text-black' : 'border-white/20 bg-black/45 text-white'
+            }`}
+          >
+            {item.label}
+          </button>
+        ))}
+      </div>
+
       {/* Slides */}
       {featured.map((media, index) => {
         const isActive = index === activeIndex
@@ -63,29 +83,39 @@ export default function FeaturedCarousel({ items, label }) {
                 alt=""
                 loading={index === 0 ? 'eager' : 'lazy'}
                 onLoad={() => markImgLoaded(media.key)}
-                className={`h-full w-full object-cover transition-opacity duration-1000 ${
+                className={`hidden h-full w-full object-cover object-center transition-opacity duration-1000 sm:block ${
                   loaded ? 'opacity-100' : 'opacity-0'
                 }`}
               />
+              <img
+                src={posterUrl(media.poster, 'w500')}
+                alt=""
+                loading={index === 0 ? 'eager' : 'lazy'}
+                onLoad={() => markImgLoaded(media.key)}
+                className={`absolute inset-0 h-full w-full object-cover object-top transition-opacity duration-1000 sm:hidden ${
+                  loaded ? 'opacity-100' : 'opacity-0'
+                }`}
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-ink via-black/35 to-black/20 sm:hidden" />
               <div className="hero-gradient absolute inset-0" />
               <div className="absolute inset-x-0 top-0 h-40 bg-gradient-to-b from-black/60 to-transparent" />
             </div>
 
             {/* Foreground */}
-            <div className="relative z-10 mx-auto flex min-h-[62vh] w-full max-w-screen-2xl flex-col justify-end px-4 pb-12 sm:min-h-[82vh] sm:px-6 sm:pb-16 lg:px-10">
+            <div className="relative z-10 mx-auto flex h-full w-full max-w-screen-2xl flex-col justify-end px-4 pb-10 pt-28 sm:px-6 sm:pb-16 sm:pt-36 lg:px-10">
               <div
                 className={`max-w-2xl transition-opacity duration-1000 ease-in-out ${
                   isActive && loaded ? 'opacity-100' : 'opacity-0'
                 }`}
               >
-                <p className="mb-3 inline-flex items-center gap-2 rounded-full border border-white/15 bg-black/40 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.2em] text-cream/90 backdrop-blur">
+                <p className="mb-2 inline-flex items-center gap-2 rounded-full border border-white/15 bg-black/45 px-3 py-1 text-[9px] font-black uppercase tracking-[0.18em] text-cream/90 backdrop-blur sm:mb-3 sm:text-[11px]">
                   {label || (media.mediaType === 'tv' ? 'TV Series' : 'Featured Film')}
                 </p>
-                <h1 className="text-4xl font-black leading-[1.02] tracking-tight text-white drop-shadow-xl sm:text-6xl lg:text-7xl">
+                <h1 className="max-w-[12ch] text-3xl font-black leading-[1.02] tracking-tight text-white drop-shadow-xl sm:max-w-none sm:text-6xl lg:text-7xl">
                   {media.title}
                 </h1>
 
-                <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2 text-sm font-semibold text-cream/90">
+                <div className="mt-2.5 flex flex-wrap items-center gap-x-3 gap-y-1.5 text-xs font-semibold text-cream/90 sm:mt-4 sm:gap-x-4 sm:text-sm">
                   <span className="text-emerald-400">
                     {Math.min(98, Math.round(media.rating * 10))}% Match
                   </span>
@@ -104,21 +134,21 @@ export default function FeaturedCarousel({ items, label }) {
                   </span>
                 </div>
 
-                <p className="mt-4 max-w-xl text-sm leading-relaxed text-cream/85 sm:text-base">
+                <p className="mt-3 max-w-xl line-clamp-3 text-xs leading-relaxed text-cream/85 sm:mt-4 sm:line-clamp-none sm:text-base">
                   {truncate(media.overview, 260)}
                 </p>
 
-                <div className="mt-7 flex flex-wrap items-center gap-3">
+                <div className="mt-4 flex flex-wrap items-center gap-2.5 sm:mt-7 sm:gap-3">
                   <button
                     onClick={() => navigate(watchPath)}
-                    className="inline-flex items-center gap-2 rounded-full bg-white px-7 py-3 text-sm font-bold text-black transition hover:bg-cream focus:outline-none focus-visible:ring-2 focus-visible:ring-white"
+                    className="inline-flex min-h-10 items-center gap-2 rounded-full bg-white px-5 py-2.5 text-xs font-black text-black transition hover:bg-cream focus:outline-none focus-visible:ring-2 focus-visible:ring-white sm:min-h-12 sm:px-7 sm:py-3 sm:text-sm"
                   >
                     <PlayIcon className="h-5 w-5" />
                     Play
                   </button>
                   <button
                     onClick={() => navigate(watchPath)}
-                    className="inline-flex items-center gap-2 rounded-full bg-white/25 px-7 py-3 text-sm font-bold text-white backdrop-blur-sm transition hover:bg-white/40"
+                    className="inline-flex min-h-10 items-center gap-2 rounded-full bg-white/20 px-5 py-2.5 text-xs font-black text-white backdrop-blur-sm transition hover:bg-white/35 sm:min-h-12 sm:px-7 sm:py-3 sm:text-sm"
                   >
                     <InfoIcon className="h-5 w-5" />
                     More Info
@@ -140,7 +170,7 @@ export default function FeaturedCarousel({ items, label }) {
 
       {/* Pagination dots */}
       {featured.length > 1 && (
-        <div className="absolute bottom-6 left-1/2 z-20 flex -translate-x-1/2 gap-2">
+        <div className="absolute bottom-4 left-1/2 z-20 flex -translate-x-1/2 gap-2 sm:bottom-6">
           {featured.map((item, index) => (
             <button
               key={item.key}
