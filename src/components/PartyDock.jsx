@@ -40,9 +40,9 @@ export default function PartyDock({
 
   return (
     <div className="shrink-0 border-t border-white/10 bg-ink">
-      <div className="grid grid-cols-1 gap-4 p-4 md:grid-cols-2 xl:grid-cols-3">
+      <div className="grid grid-cols-2 gap-2 border-t border-white/10 bg-[#090909] p-2 sm:gap-3 sm:p-3 lg:grid-cols-2 xl:grid-cols-3">
         {/* Party code */}
-        <section className="rounded-xl border border-white/10 bg-white/3 p-4">
+        <section className="rounded-xl border border-white/10 bg-white/[0.035] p-2.5 sm:p-3">
           <div className="flex items-center justify-between">
             <p className="text-[10px] font-black uppercase tracking-[0.2em] text-brand">Party Code</p>
             <button
@@ -52,8 +52,8 @@ export default function PartyDock({
               {copied ? 'Copied!' : 'Copy Link'}
             </button>
           </div>
-          <p className="mt-1 text-2xl font-black tracking-wider text-white">{roomCode}</p>
-          <p className="mt-1 text-[11px] text-mist">Share this code — or copy the link — to invite friends in.</p>
+          <p className="mt-1 text-xl font-black tracking-wider text-white sm:text-2xl">{roomCode}</p>
+          <p className="mt-1 text-[10px] leading-4 text-mist sm:text-[11px]">Share this code — or copy the link — to invite friends in.</p>
         </section>
 
         {/* Host controls */}
@@ -62,7 +62,7 @@ export default function PartyDock({
             <p className="text-[10px] font-black uppercase tracking-[0.2em] text-brand">Watch Together</p>
             {!sharing ? (
               <>
-                <p className="mt-2 text-[11px] leading-snug text-mist">
+                <p className="mt-2 text-[10px] leading-snug text-mist sm:text-[11px]">
                   Share your screen/tab with the video to stream it live to every member — perfect sync, no player hacks.
                 </p>
                 <p className="mt-2 rounded bg-white/5 px-2 py-1.5 text-[9px] font-bold leading-snug text-mist/80">
@@ -71,7 +71,7 @@ export default function PartyDock({
                 </p>
                 <button
                   onClick={onStartShare}
-                  className="mt-3 w-full rounded-lg bg-brand px-3 py-2.5 text-xs font-black uppercase tracking-wider text-white transition-colors hover:bg-brand-dark"
+                  className="mt-3 min-h-10 w-full rounded-lg bg-brand px-2 py-2.5 text-[10px] sm:px-3 sm:text-xs font-black uppercase tracking-wider text-white transition-colors hover:bg-brand-dark"
                 >
                   Start Screen Share
                 </button>
@@ -115,7 +115,7 @@ export default function PartyDock({
                 </div>
                 <button
                   onClick={onStopShare}
-                  className="mt-3 w-full rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-xs font-black uppercase tracking-wider text-red-400 transition-colors hover:bg-red-500/20"
+                  className="mt-3 min-h-10 w-full rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-xs font-black uppercase tracking-wider text-red-400 transition-colors hover:bg-red-500/20"
                 >
                   Stop Sharing
                 </button>
@@ -178,7 +178,7 @@ export default function PartyDock({
               <button
                 onClick={onRequestSync}
                 disabled={syncRequested}
-                className="mt-3 w-full rounded-lg border border-white/15 bg-surface px-3 py-2 text-xs font-bold text-white transition-colors hover:bg-white/10 disabled:opacity-50"
+                className="mt-3 min-h-10 w-full rounded-lg border border-white/15 bg-surface px-3 py-2 text-xs font-bold text-white transition-colors hover:bg-white/10 disabled:opacity-50"
               >
                 {syncRequested ? 'Requesting sync...' : 'Request Sync'}
               </button>
