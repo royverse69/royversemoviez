@@ -8,9 +8,10 @@ export default function ConsentGate({ children }) {
   })
   const [checked, setChecked] = useState(false)
   const [showTerms, setShowTerms] = useState(false)
+  const [termsViewed, setTermsViewed] = useState(false)
 
   const accept = () => {
-    if (!checked) return
+    if (!checked || !termsViewed) return
     try { localStorage.setItem(STORAGE_KEY, 'accepted') } catch {}
     setAccepted(true)
   }
@@ -56,7 +57,7 @@ export default function ConsentGate({ children }) {
           </p>
         </div>
 
-        <button type="button" onClick={() => setShowTerms((value) => !value)}
+        <button type="button" onClick={() => { setShowTerms((value) => !value); setTermsViewed(true) }}
           className="mt-5 flex min-h-11 w-full items-center justify-between rounded-xl border border-white/15 px-4 text-left text-sm font-bold hover:bg-white/5">
           Terms & Conditions <span>{showTerms ? '−' : '+'}</span>
         </button>
@@ -75,11 +76,11 @@ export default function ConsentGate({ children }) {
         <label className="mt-5 flex cursor-pointer items-start gap-3 rounded-xl border border-white/10 p-3">
           <input type="checkbox" checked={checked} onChange={(event) => setChecked(event.target.checked)} className="mt-1 h-4 w-4 accent-red-500" />
           <span className="text-sm leading-6 text-white/85">
-            I have read and agree to the Terms & Conditions, understand playback uses third-party services,
+            I have opened and read the Terms & Conditions, understand playback uses third-party services,
             and will not download or install anything prompted by an external player.
           </span>
         </label>
-        <button type="button" disabled={!checked} onClick={accept}
+        <button type="button" disabled={!checked || !termsViewed} onClick={accept}
           className="mt-4 min-h-12 w-full rounded-full bg-red-600 px-5 text-sm font-black text-white transition hover:bg-red-500 disabled:cursor-not-allowed disabled:opacity-40">
           Accept & Continue
         </button>
