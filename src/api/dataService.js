@@ -260,6 +260,27 @@ export async function getDetails(mediaType, id) {
   return normalizeMedia({ ...raw, external_ids: externalIds }, mediaType)
 }
 
+export async function getOmdbDetails(imdbId, apiKey) {
+  if (!imdbId || !apiKey) return null
+  const url = new URL('https://www.omdbapi.com/')
+  url.searchParams.set('apikey', apiKey)
+  url.searchParams.set('i', imdbId)
+  url.searchParams.set('plot', 'short')
+  const response = await fetch(url)
+  if (!response.ok) throw new Error(`OMDb request failed (${response.status})`)
+  const result = await response.json()
+  if (result.Response === 'False') return null
+  return {
+    imdbId: result.imdbID || imdbId,
+    rating: result.imdbRating && result.imdbRating !== 'N/A' ? result.imdbRating : null,
+    votes: result.imdbVotes && result.imdbVotes !== 'N/A' ? result.imdbVotes : null,
+    rated: result.Rated && result.Rated !== 'N/A' ? result.Rated : null,
+    awards: result.Awards && result.Awards !== 'N/A' ? result.Awards : null,
+    plot: result.Plot && result.Plot !== 'N/A' ? result.Plot : null,
+    genre: result.Genre && result.Genre !== 'N/A' ? result.Genre : null,
+  }
+}
+
 export async function getBackdrops(mediaType, id, limit = 5) {
   if (!hasApiKey()) return []
   const images = await api.images(mediaType, id).catch(() => ({ backdrops: [] }))
