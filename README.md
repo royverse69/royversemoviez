@@ -158,7 +158,11 @@ npm run lint      # oxlint
 
 ## 📦 Deploy
 
-It's a static SPA — any static host works (Vercel/Netlify/GitHub Pages). Build with `npm run build` and serve `dist/`. TMDB works out of the box via the built-in key; set `VITE_TMDB_API_KEY` only to use your own (see “TMDB API key”). For watch parties set `VITE_PARTY_WS_URL` to your deployed worker. For client-side routes to work on refresh, add an SPA fallback (serve `index.html` for unknown paths).
+This repository includes a GitHub Actions workflow at `.github/workflows/deploy.yml`. For GitHub Pages, push the repository to the `main` branch, then open **Settings → Pages → Build and deployment** and set **Source** to **GitHub Actions**. The workflow installs dependencies, runs the Vite production build, and deploys the generated `dist/` directory. The default production base path is `/royversemoviez/`, matching this repository name.
+
+For a root-domain deployment (Vercel, Netlify, or a custom domain), build with `VITE_BASE_PATH=/ npm run build` and configure the host to serve `dist/` with an SPA fallback to `index.html`. When deploying under a different project subpath, set `VITE_BASE_PATH=/your-repository-name/` before building. Do not publish the repository's source-root `index.html` directly: it is the Vite development entry and points at `src/main.jsx`; production hosting must serve the compiled `dist/` output.
+
+TMDB works out of the box via the built-in key; set `VITE_TMDB_API_KEY` only to use your own (see “TMDB API key”). For watch parties set `VITE_PARTY_WS_URL` to your deployed worker.
 
 ---
 

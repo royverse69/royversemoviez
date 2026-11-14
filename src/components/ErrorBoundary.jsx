@@ -40,7 +40,7 @@ export default class ErrorBoundary extends Component {
               Try again
             </button>
             <a
-              href="/"
+              href={import.meta.env.BASE_URL}
               className="rounded-full border border-white/30 px-6 py-3 text-sm font-bold text-white transition hover:bg-white/10"
             >
               Go home

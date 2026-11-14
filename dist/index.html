@@ -2,26 +2,16 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <link rel="manifest" href="/manifest.webmanifest" />
-    <meta name="theme-color" content="#0a0a0a" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#0a0a0a" />
     <meta name="description" content="RoyverseMoviez — discover movies and series, made by AshutoshRoy." />
-    <title>RoyverseMoviez — Movies & Series</title>
+    <link rel="icon" type="image/svg+xml" href="/royversemoviez/favicon.svg" />
+    <link rel="manifest" href="/royversemoviez/manifest.webmanifest" />
+    <link rel="stylesheet" crossorigin href="/royversemoviez/assets/index-DLhcddIt.css" />
+    <title>RoyverseMoviez — Movies &amp; Series</title>
+    <script type="module" crossorigin src="/royversemoviez/assets/index-DiYbCgdM.js"></script>
   </head>
   <body>
     <div id="root"></div>
-    <script>
-      ;(function (location) {
-        if (!location.search.startsWith('?/')) return
-        const decoded = location.search
-          .slice(2)
-          .split('&')
-          .map((part) => part.replace(/~and~/g, '&'))
-          .join('?')
-        window.history.replaceState(null, '', location.pathname.replace(/\/$/, '') + '/' + decoded + location.hash)
-      })(window.location)
-    </script>
-    <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>
