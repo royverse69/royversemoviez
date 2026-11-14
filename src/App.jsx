@@ -21,10 +21,12 @@ import WatchPage from './pages/WatchPage.jsx'
 import SettingsPage from './pages/SettingsPage.jsx'
 import WatchPartyPage from './pages/WatchPartyPage.jsx'
 import WatchPartyRoom from './pages/WatchPartyRoom.jsx'
+import ConsentGate from './components/ConsentGate.jsx'
 
 export default function App() {
   return (
     <BrowserRouter basename={import.meta.env.BASE_URL}>
+      <ConsentGate>
       <ApiKeyProvider>
         <PreferencesProvider>
         <MyListProvider>
@@ -61,6 +63,7 @@ export default function App() {
         </MyListProvider>
         </PreferencesProvider>
       </ApiKeyProvider>
+      </ConsentGate>
     </BrowserRouter>
   )
 }
