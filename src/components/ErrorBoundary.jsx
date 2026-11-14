@@ -30,7 +30,13 @@ export default class ErrorBoundary extends Component {
           </div>
           <h1 className="text-2xl font-black text-white">Something went wrong</h1>
           <p className="mt-2 max-w-md text-sm text-mist">
-            An unexpected error occurred while loading this page. Try reloading — your watchlist and history are safe.
+            An unexpected error occurred while loading this page. Try again or return home. Your watchlist and history are safe.
+          </p>
+          {import.meta.env.DEV && this.state.error && (
+            <pre className="mt-3 max-w-xl overflow-auto rounded-lg border border-white/10 bg-white/5 p-3 text-left text-[10px] text-red-200">
+              {String(this.state.error.stack || this.state.error.message || this.state.error)}
+            </pre>
+          )}
           </p>
           <div className="mt-6 flex gap-3">
             <button
