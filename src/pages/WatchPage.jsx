@@ -4,12 +4,14 @@ import {
   getBackdrops,
   getCast,
   getDetails,
+  getOmdbDetails,
   getRelated,
   getSeasonEpisodes,
   getVideo,
 } from '../api/dataService.js'
 import { originalBackdropUrl, posterUrl, stillUrl } from '../api/tmdb.js'
 import { useData } from '../hooks/useData.js'
+import { useLocalStorage } from '../hooks/useLocalStorage.js'
 import { useProvider } from '../context/ProviderContext.jsx'
 import { useApiKey } from '../context/ApiKeyContext.jsx'
 import { useMyList } from '../context/MyListContext.jsx'
@@ -38,6 +40,7 @@ export default function WatchPage() {
   const mediaType = type === 'tv' ? 'tv' : 'movie'
   const { providerId, setProvider } = useProvider()
   const { apiKey } = useApiKey()
+  const [omdbApiKey] = useLocalStorage('royversemoviez.omdb-api-key', '')
   const { has, toggle } = useMyList()
   const { add: addHistory, items: historyItems } = useHistory()
   const { get: getRating, set: setRating } = useRatings()
@@ -52,6 +55,12 @@ export default function WatchPage() {
   const { data: media, loading } = useData(
     () => (id ? getDetails(mediaType, id).catch(() => null) : Promise.resolve(null)),
     [mediaType, id, apiKey]
+  )
+  const { data: imdbDetails } = useData(
+    () => media?.imdbId && omdbApiKey
+      ? getOmdbDetails(media.imdbId, omdbApiKey).catch(() => null)
+      : Promise.resolve(null),
+    [media?.imdbId, omdbApiKey]
   )
   const { data: backdropPaths } = useData(
     () => (id ? getBackdrops(mediaType, id).catch(() => []) : Promise.resolve([])),
@@ -195,6 +204,13 @@ export default function WatchPage() {
                   IMDb ↗
                 </a>
               )}
+              {imdbDetails?.rating && (
+                <span className="inline-flex items-center gap-1 rounded border border-yellow-400/20 bg-yellow-400/10 px-2 py-1 text-[10px] font-black text-yellow-200">
+                  IMDb ★ {imdbDetails.rating}/10
+                  {imdbDetails.votes && <span className="font-semibold text-yellow-100/65">· {imdbDetails.votes}</span>}
+                </span>
+              )}
+              {imdbDetails?.rated && <span className="rounded border border-white/15 px-2 py-1 text-[10px] font-bold text-cream/75">Rated {imdbDetails.rated}</span>}
             </div>
 
             <h2 className="mt-7 text-xs font-black uppercase tracking-[0.18em] text-white">About</h2>
