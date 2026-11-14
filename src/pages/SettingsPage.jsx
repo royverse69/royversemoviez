@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useApiKey } from '../context/ApiKeyContext.jsx'
+import { useLocalStorage } from '../hooks/useLocalStorage.js'
 import { useMyList } from '../context/MyListContext.jsx'
 import { usePreferences } from '../context/PreferencesContext.jsx'
 import { validateTmdbApiKey } from '../api/tmdb.js'
@@ -11,6 +12,7 @@ export default function SettingsPage() {
   const { apiKey, updateApiKey, hasApiKey } = useApiKey()
   const { items } = useMyList()
   const { country, setCountry } = usePreferences()
+  const [partyWorkerUrl, setPartyWorkerUrl] = useLocalStorage('royversemoviez.party-ws-url', '')
   const [draft, setDraft] = useState(apiKey)
   const [showKey, setShowKey] = useState(false)
   const [saving, setSaving] = useState(false)
@@ -130,6 +132,46 @@ export default function SettingsPage() {
               Remove
             </button>
           )}
+        </div>
+      </div>
+
+      {/* Watch Party connection */}
+      <div className="mt-6 rounded-2xl border border-white/12 bg-surface p-4 sm:p-5">
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <h2 className="text-lg font-extrabold text-white">Watch Party Server</h2>
+            <p className="mt-0.5 text-xs text-mist">Cloudflare Worker connection for creating and joining rooms</p>
+          </div>
+          <span className={`rounded-md border px-2 py-1.5 text-[8px] font-black uppercase tracking-wider ${partyWorkerUrl ? 'border-emerald-400/25 bg-emerald-400/10 text-emerald-300' : 'border-amber-400/25 bg-amber-400/10 text-amber-300'}`}>
+            {partyWorkerUrl ? 'URL saved' : 'Not configured'}
+          </span>
+        </div>
+        <label className="mt-5 block text-[10px] font-black uppercase tracking-[0.16em] text-mist">Worker base URL</label>
+        <input
+          type="url"
+          value={partyWorkerUrl}
+          onChange={(event) => setPartyWorkerUrl(event.target.value.trim())}
+          placeholder="https://your-worker.your-subdomain.workers.dev"
+          autoCapitalize="none"
+          autoComplete="url"
+          spellCheck={false}
+          className="mt-2 min-h-12 w-full rounded-lg border border-white/12 bg-[#0d0d0d] px-3.5 text-sm text-white outline-none placeholder:text-mist/60 focus:border-brand"
+        />
+        <p className="mt-2 text-[10px] leading-relaxed text-mist">
+          Paste the base URL of the deployed Worker from Cloudflare. RoyverseMoviez adds the /party/{'{code}'} route automatically. This value is saved only in this browser; a GitHub Actions VITE_PARTY_WS_URL secret can also set it for every visitor.
+        </p>
+        <div className="mt-3 flex gap-2">
+          <button
+            type="button"
+            onClick={() => setPartyWorkerUrl('')}
+            disabled={!partyWorkerUrl}
+            className="min-h-10 rounded-lg border border-white/15 px-4 text-xs font-bold text-cream transition hover:bg-white/5 disabled:opacity-40"
+          >
+            Clear URL
+          </button>
+          <a href="https://developers.cloudflare.com/workers/" target="_blank" rel="noreferrer" className="inline-flex min-h-10 items-center rounded-lg border border-white/15 px-4 text-xs font-bold text-cream transition hover:bg-white/5">
+            Worker docs ↗
+          </a>
         </div>
       </div>
 
