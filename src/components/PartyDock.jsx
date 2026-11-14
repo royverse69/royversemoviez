@@ -30,7 +30,8 @@ export default function PartyDock({
 
   const copyLink = async () => {
     const url = new URL(window.location)
-    url.pathname = `/party/${roomCode}`
+    const basePath = (import.meta.env.BASE_URL || '/').replace(/[/]+$/, '')
+    url.pathname = `${basePath}/party/${roomCode}`
     try {
       await navigator.clipboard.writeText(url.toString())
       setCopied(true)
