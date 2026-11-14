@@ -13,6 +13,9 @@ self.addEventListener('install', (event) => {
       APP_ENTRY,
       new URL('favicon.svg', APP_SCOPE).href,
       new URL('manifest.webmanifest', APP_SCOPE).href,
+      new URL('icons/icon-192.png', APP_SCOPE).href,
+      new URL('icons/icon-512.png', APP_SCOPE).href,
+      new URL('apple-touch-icon.png', APP_SCOPE).href,
     ]))
   )
 })
