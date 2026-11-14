@@ -126,6 +126,7 @@ function PartyRoomContent() {
   })
 
   const [memberQuality, setMemberQuality] = useState('hd')
+  const [partyProvider, setPartyProvider] = useState('cinesrc')
   const handleMemberQuality = useCallback((key) => {
     setMemberQuality(key)
     requestQuality(key)
@@ -159,7 +160,7 @@ function PartyRoomContent() {
 
   const playerUrl =
     partyMedia?.mediaType && partyMedia?.mediaId
-      ? buildEmbedUrl('vidfast', partyMedia.mediaType, partyMedia.mediaId, partyMedia.season, partyMedia.episode)
+      ? buildEmbedUrl(partyProvider, partyMedia.mediaType, partyMedia.mediaId, partyMedia.season, partyMedia.episode)
       : null
 
   const iframeRef = useRef(null)
@@ -173,6 +174,12 @@ function PartyRoomContent() {
     sendPartyEvent,
     syncRequestId,
   })
+
+  useEffect(() => {
+    if (partyProvider === 'cinesrc' && playback.bridge.error) {
+      setPartyProvider('vidcore')
+    }
+  }, [partyProvider, playback.bridge.error])
 
   if (!connected && !reconnecting && !partyMedia) {
     return (
@@ -247,6 +254,11 @@ function PartyRoomContent() {
         {/* Left column: video fills available space, dock sits compact below */}
         <div className="flex min-w-0 flex-1 flex-col">
           <div className="relative min-h-0 flex-1 bg-black">
+            {partyProvider !== 'cinesrc' && !memberViewingShare && (
+              <div className="absolute left-3 top-3 z-20 rounded-full border border-amber-300/20 bg-black/75 px-3 py-1.5 text-[10px] font-bold text-amber-100 backdrop-blur">
+                CineSrc unavailable · using VidCore backup
+              </div>
+            )}
             {memberViewingShare ? (
               remoteStream ? (
                 <video
