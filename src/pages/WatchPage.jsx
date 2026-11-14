@@ -363,7 +363,7 @@ function EpisodeSidebar({ seasons, season, episode, episodes, loading, onSeasonC
 
   return (
     <div
-      className={`pointer-events-none z-30 mt-8 w-full lg:absolute lg:-right-6 lg:bottom-8 lg:top-16 lg:mt-0 lg:w-[390px] xl:-right-8 ${expanded ? 'h-[58vh] lg:h-auto' : 'h-12 lg:h-auto'}`}
+      className={`relative pointer-events-none z-30 mt-8 w-full lg:absolute lg:-right-6 lg:bottom-8 lg:top-16 lg:mt-0 lg:w-[390px] xl:-right-8 ${expanded ? 'h-[58vh] lg:h-auto' : 'h-12 lg:h-auto'}`}
     >
       <button
         onMouseEnter={() => setHovered(true)}
@@ -710,6 +710,11 @@ function PlayerView({
             <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs font-semibold text-cream/65">
               {metaItems.map((item) => <span key={item}>{item}</span>)}
               {media?.genres?.length > 0 && <span>{media.genres.slice(0, 3).join(' · ')}</span>}
+              {media?.imdbId && (
+                <a href={`https://www.imdb.com/title/${media.imdbId}/`} target="_blank" rel="noreferrer" className="rounded border border-yellow-400/30 bg-yellow-400/10 px-2 py-0.5 text-[10px] font-black text-yellow-200">
+                  IMDb ↗
+                </a>
+              )}
             </div>
           </div>
           {mode === 'content' && mediaType === 'tv' && nextEpisode && (
