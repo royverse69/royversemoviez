@@ -87,6 +87,7 @@ export const api = {
     ),
   detail: (mediaType, id) => request(`${mediaType === 'tv' ? '/tv' : '/movie'}/${id}`),
   externalIds: (mediaType, id) => request(`${mediaType === 'tv' ? '/tv' : '/movie'}/${id}/external_ids`),
+  findByExternalId: (externalId, source = 'imdb_id') => request(`/find/${encodeURIComponent(externalId)}`, { external_source: source }),
   images: (mediaType, id) => request(`${mediaType === 'tv' ? '/tv' : '/movie'}/${id}/images`, { include_image_language: 'en,null' }),
   season: (id, seasonNumber) => request(`/tv/${id}/season/${seasonNumber}`),
   credits: (mediaType, id) => request(`${mediaType === 'tv' ? '/tv' : '/movie'}/${id}/credits`),
