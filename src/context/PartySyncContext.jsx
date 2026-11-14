@@ -181,7 +181,6 @@ export function PartySyncProvider({ children }) {
             }, 1800)
           } else {
             inRoomRef.current = false
-            joinParamsRef.current = null
             setReconnecting(false)
             setError('Could not connect after several attempts. Verify the Worker URL and try again.')
           }
