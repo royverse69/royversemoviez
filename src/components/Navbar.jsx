@@ -22,6 +22,7 @@ export default function Navbar() {
   const { items } = useMyList()
   const { items: historyItems } = useHistory()
   const location = useLocation()
+  const immersive = location.pathname.startsWith('/watch/') || /^\\/party\\/[^/]+/.test(location.pathname)
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 40)
@@ -33,6 +34,7 @@ export default function Navbar() {
   useEffect(() => setMenuOpen(false), [location.pathname, location.search])
 
   return (
+    <>
     <header
       className={`fixed inset-x-0 top-0 z-40 transition-colors duration-500 ${
         scrolled || menuOpen
@@ -143,6 +145,32 @@ export default function Navbar() {
         </div>
       )}
     </header>
+
+    {!immersive && (
+      <nav
+        aria-label="Mobile primary navigation"
+        className="fixed inset-x-0 bottom-0 z-50 grid h-[calc(4rem+env(safe-area-inset-bottom))] grid-cols-5 border-t border-white/10 bg-[#080808]/95 px-1 pt-1 shadow-[0_-8px_30px_rgba(0,0,0,.35)] backdrop-blur-xl lg:hidden"
+      >
+        {[
+          { to: '/', label: 'Home', glyph: '⌂', end: true },
+          { to: '/movies', label: 'Movies', glyph: '▣' },
+          { to: '/series', label: 'Series', glyph: '▤' },
+          { to: '/party', label: 'Party', glyph: '◉' },
+          { to: '/mylist', label: 'My List', glyph: '＋' },
+        ].map((item) => (
+          <NavLink
+            key={item.to}
+            to={item.to}
+            end={item.end}
+            className={({ isActive }) => `flex min-w-0 flex-col items-center justify-center gap-0.5 rounded-lg px-1 pb-[env(safe-area-inset-bottom)] text-[9px] font-extrabold transition-colors ${isActive ? 'text-brand' : 'text-cream/55 hover:text-white'}`}
+          >
+            <span aria-hidden="true" className="text-[19px] leading-5">{item.glyph}</span>
+            <span className="truncate">{item.label}</span>
+          </NavLink>
+        ))}
+      </nav>
+    )}
+    </>
   )
 }
 
