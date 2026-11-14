@@ -769,3 +769,21 @@ function PlayerView({
   )
 }
 
+
+
+function formatDuration(minutes) {
+  const value = Number(minutes)
+  if (!Number.isFinite(value) || value <= 0) return ''
+  const hours = Math.floor(value / 60)
+  const remainder = value % 60
+  return hours ? `${hours}h ${remainder}m` : `${remainder}m`
+}
+
+function formatClock(seconds) {
+  const value = Math.max(0, Math.floor(Number(seconds) || 0))
+  const hours = Math.floor(value / 3600)
+  const minutes = Math.floor((value % 3600) / 60)
+  const remainder = value % 60
+  const pad = (number) => String(number).padStart(2, '0')
+  return hours > 0 ? `${hours}:${pad(minutes)}:${pad(remainder)}` : `${minutes}:${pad(remainder)}`
+}
