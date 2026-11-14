@@ -253,8 +253,11 @@ export async function getVideo(mediaType, id) {
 
 export async function getDetails(mediaType, id) {
   if (!hasApiKey()) return getMockMedia().find((m) => String(m.id) === String(id)) || null
-  const raw = await api.detail(mediaType, id)
-  return normalizeMedia(raw, mediaType)
+  const [raw, externalIds] = await Promise.all([
+    api.detail(mediaType, id),
+    api.externalIds(mediaType, id).catch(() => ({})),
+  ])
+  return normalizeMedia({ ...raw, external_ids: externalIds }, mediaType)
 }
 
 export async function getBackdrops(mediaType, id, limit = 5) {
