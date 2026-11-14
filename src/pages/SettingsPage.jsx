@@ -14,6 +14,7 @@ export default function SettingsPage() {
   const { country, setCountry } = usePreferences()
   const [partyWorkerUrl, setPartyWorkerUrl] = useLocalStorage('royversemoviez.party-ws-url', '')
   const [omdbApiKey, setOmdbApiKey] = useLocalStorage('royversemoviez.omdb-api-key', '')
+  const [workerTest, setWorkerTest] = useState({ status: 'idle', message: '' })
   const [draft, setDraft] = useState(apiKey)
   const [showKey, setShowKey] = useState(false)
   const [saving, setSaving] = useState(false)
@@ -50,6 +51,27 @@ export default function SettingsPage() {
     updateApiKey('')
     setDraft('')
     setMessage({ type: 'success', text: 'API key removed. Add your own key to restore the live catalog.' })
+  }
+
+  const testPartyWorker = async () => {
+    setWorkerTest({ status: 'testing', message: 'Checking the Worker health endpoint…' })
+    try {
+      const base = new URL(partyWorkerUrl.trim())
+      if (base.protocol === 'wss:') base.protocol = 'https:'
+      if (base.protocol === 'ws:') base.protocol = 'http:'
+      if (!['https:', 'http:'].includes(base.protocol)) throw new Error('Use an https:// Worker URL.')
+      base.pathname = `${base.pathname.replace(/[/]+$/, '')}/health`
+      base.search = ''
+      base.hash = ''
+      const response = await fetch(base.toString(), { cache: 'no-store' })
+      const data = await response.json()
+      if (!response.ok || !data.ok || !data.durableObjectsConfigured) {
+        throw new Error(data.error || 'Worker responded, but the Durable Object binding is not ready.')
+      }
+      setWorkerTest({ status: 'success', message: 'Connected — Worker and PARTY_ROOMS binding are responding.' })
+    } catch (error) {
+      setWorkerTest({ status: 'error', message: error.message || 'Could not reach the Watch Party Worker.' })
+    }
   }
 
   return (
@@ -161,10 +183,23 @@ export default function SettingsPage() {
         <p className="mt-2 text-[10px] leading-relaxed text-mist">
           Paste the base URL of the deployed Worker from Cloudflare. RoyverseMoviez adds the /party/{'{code}'} route automatically. This value is saved only in this browser; a GitHub Actions VITE_PARTY_WS_URL secret can also set it for every visitor.
         </p>
-        <div className="mt-3 flex gap-2">
+        {workerTest.message && (
+          <p role="status" className={`mt-3 text-xs leading-5 ${workerTest.status === 'error' ? 'text-red-300' : workerTest.status === 'success' ? 'text-emerald-300' : 'text-mist'}`}>
+            {workerTest.message}
+          </p>
+        )}
+        <div className="mt-3 flex flex-wrap gap-2">
           <button
             type="button"
-            onClick={() => setPartyWorkerUrl('')}
+            onClick={testPartyWorker}
+            disabled={!partyWorkerUrl.trim() || workerTest.status === 'testing'}
+            className="min-h-10 rounded-lg bg-white px-4 text-xs font-black text-black transition hover:bg-cream disabled:opacity-40"
+          >
+            {workerTest.status === 'testing' ? 'Testing…' : 'Test connection'}
+          </button>
+          <button
+            type="button"
+            onClick={() => { setPartyWorkerUrl(''); setWorkerTest({ status: 'idle', message: '' }) }}
             disabled={!partyWorkerUrl}
             className="min-h-10 rounded-lg border border-white/15 px-4 text-xs font-bold text-cream transition hover:bg-white/5 disabled:opacity-40"
           >
