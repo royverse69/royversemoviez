@@ -24,9 +24,7 @@ function parseLegacyMessage(data) {
   if (payload.type === 'MEDIA_DATA' && payload.data && typeof payload.data === 'object') {
     return { activityOnly: true, mediaData: payload.data }
   }
-  if (payload.event === 'status') {
-    return { activityOnly: true, notFound: payload.data === 404 }
-  }
+  if (payload.event === 'status') return { activityOnly: true, notFound: payload.data === 404 }
   const type = typeof payload.type === 'string' ? payload.type : ''
   if (!type.includes('timeupdate')) return null
   const time = Number(payload.time ?? payload.currentTime)
@@ -38,11 +36,22 @@ function parseLegacyMessage(data) {
   }
 }
 
+const initialState = {
+  time: 0,
+  duration: 0,
+  paused: true,
+  volume: 1,
+  muted: false,
+  playbackRate: 1,
+  updatedAt: 0,
+}
+
 export function usePlayerBridge({ iframeRef, playerUrl, active = true }) {
   const [ready, setReady] = useState(false)
   const [hasTelemetry, setHasTelemetry] = useState(false)
   const [error, setError] = useState(null)
-  const stateRef = useRef({ time: 0, duration: 0, paused: null, updatedAt: 0 })
+  const [closed, setClosed] = useState(false)
+  const stateRef = useRef(initialState)
   const lastMessageAtRef = useRef(0)
   const mediaDataRef = useRef(null)
   const listenersRef = useRef(new Set())
@@ -51,6 +60,12 @@ export function usePlayerBridge({ iframeRef, playerUrl, active = true }) {
     try { return playerUrl ? new URL(playerUrl).origin : null } catch { return null }
   }, [playerUrl])
   const isCineSrc = playerOrigin === CINESRC_ORIGIN
+
+  const publish = useCallback((next) => {
+    stateRef.current = next
+    lastMessageAtRef.current = Date.now()
+    listenersRef.current.forEach((fn) => { try { fn(next) } catch {} })
+  }, [])
 
   const subscribe = useCallback((fn) => {
     listenersRef.current.add(fn)
@@ -65,12 +80,10 @@ export function usePlayerBridge({ iframeRef, playerUrl, active = true }) {
     if (!win || !playerOrigin) return
 
     if (playerOrigin === CINESRC_ORIGIN) {
-      // CineSrc documents this command envelope and exact target origin.
       try { win.postMessage({ type: 'cinesrc:command', command, args }, CINESRC_ORIGIN) } catch {}
       return
     }
 
-    // Keep the previous player bridge for explicitly selected backup providers.
     const legacyCommands = {
       play: [{ type: 'player:play' }, { command: 'play' }],
       pause: [{ type: 'player:pause' }, { command: 'pause' }],
@@ -87,31 +100,54 @@ export function usePlayerBridge({ iframeRef, playerUrl, active = true }) {
 
   const play = useCallback(() => sendCommand('play'), [sendCommand])
   const pause = useCallback(() => sendCommand('pause'), [sendCommand])
-  const seek = useCallback((time) => sendCommand('seek', [Number(time) || 0]), [sendCommand])
+  const seek = useCallback((time) => sendCommand('seek', [Math.max(0, Number(time) || 0)]), [sendCommand])
+  const setVolume = useCallback((volume) => {
+    if (playerOrigin === CINESRC_ORIGIN) sendCommand('setVolume', [Math.min(1, Math.max(0, Number(volume) || 0))])
+  }, [playerOrigin, sendCommand])
+  const setMuted = useCallback((muted) => {
+    if (playerOrigin === CINESRC_ORIGIN) sendCommand('setMuted', [Boolean(muted)])
+  }, [playerOrigin, sendCommand])
+  const setPlaybackRate = useCallback((rate) => {
+    if (playerOrigin === CINESRC_ORIGIN) sendCommand('setPlaybackRate', [Math.min(2, Math.max(0.25, Number(rate) || 1))])
+  }, [playerOrigin, sendCommand])
+  const refresh = useCallback(() => {
+    if (playerOrigin !== CINESRC_ORIGIN) return
+    sendCommand('getCurrentTime')
+    sendCommand('getDuration')
+    sendCommand('getPaused')
+    sendCommand('getVolume')
+    sendCommand('getMuted')
+    sendCommand('getPlaybackRate')
+  }, [playerOrigin, sendCommand])
 
   useEffect(() => {
     if (!active || !playerUrl || !playerOrigin) return
     setReady(false)
     setHasTelemetry(false)
     setError(null)
-    stateRef.current = { time: 0, duration: 0, paused: null, updatedAt: 0 }
+    setClosed(false)
+    stateRef.current = initialState
     lastMessageAtRef.current = 0
     mediaDataRef.current = null
 
     const fallbackTimer = window.setTimeout(() => {
       if (isCineSrc) {
         setHasTelemetry(false)
-        setError('CineSrc did not become ready. Try the backup provider.')
+        setError('CineSrc did not become ready. Try a backup player.')
       } else {
         setHasTelemetry(false)
       }
     }, isCineSrc ? CINESRC_READY_TIMEOUT_MS : BACKUP_TELEMETRY_TIMEOUT_MS)
 
-    const clearFallbackTimer = () => window.clearTimeout(fallbackTimer)
+    let timerCleared = false
+    const clearFallbackTimer = () => {
+      if (timerCleared) return
+      window.clearTimeout(fallbackTimer)
+      timerCleared = true
+    }
 
     const onMessage = (event) => {
       const iframe = iframeRef.current
-      // Messages must come from this iframe and the origin it was loaded from.
       if (!iframe || event.source !== iframe.contentWindow || event.origin !== playerOrigin) return
 
       if (isCineSrc) {
@@ -126,65 +162,70 @@ export function usePlayerBridge({ iframeRef, playerUrl, active = true }) {
           setHasTelemetry(false)
           return
         }
-
+        if (payload.type === 'cinesrc:close') {
+          setClosed(true)
+          return
+        }
         if (payload.type === 'cinesrc:ready' || payload.type === 'cinesrc:loadedmetadata') {
           clearFallbackTimer()
           setReady(true)
           setHasTelemetry(true)
-          const next = {
+          const duration = Number(payload.duration)
+          publish({
             ...prev,
-            duration: Number.isFinite(Number(payload.duration)) ? Number(payload.duration) : prev.duration,
+            duration: Number.isFinite(duration) && duration > 0 ? duration : prev.duration,
             updatedAt: now,
-          }
-          stateRef.current = next
-          lastMessageAtRef.current = now
+          })
           return
         }
-
         if (payload.type === 'cinesrc:timeupdate' || payload.type === 'cinesrc:seeking' || payload.type === 'cinesrc:seeked') {
           const time = Number(payload.currentTime)
           const duration = Number(payload.duration)
           if (!Number.isFinite(time) || time < 0) return
           const next = {
+            ...prev,
             time,
             duration: Number.isFinite(duration) && duration > 0 ? duration : prev.duration,
             paused: payload.type === 'cinesrc:timeupdate' ? false : prev.paused,
             updatedAt: now,
           }
-          stateRef.current = next
-          lastMessageAtRef.current = now
+          publish(next)
           clearFallbackTimer()
           setReady(true)
           setHasTelemetry(true)
-          listenersRef.current.forEach((fn) => { try { fn(next) } catch {} })
           return
         }
-
         if (payload.type === 'cinesrc:play' || payload.type === 'cinesrc:pause' || payload.type === 'cinesrc:ended') {
-          const next = { ...prev, paused: payload.type !== 'cinesrc:play', updatedAt: now }
-          stateRef.current = next
-          lastMessageAtRef.current = now
+          publish({ ...prev, paused: payload.type !== 'cinesrc:play', updatedAt: now })
           clearFallbackTimer()
           setReady(true)
           setHasTelemetry(true)
-          listenersRef.current.forEach((fn) => { try { fn(next) } catch {} })
           return
         }
-
+        if (payload.type === 'cinesrc:volumechange') {
+          const volume = Number(payload.volume)
+          publish({
+            ...prev,
+            volume: Number.isFinite(volume) ? Math.min(1, Math.max(0, volume)) : prev.volume,
+            muted: typeof payload.muted === 'boolean' ? payload.muted : prev.muted,
+            updatedAt: now,
+          })
+          return
+        }
+        if (payload.type === 'cinesrc:ratechange') {
+          const rate = Number(payload.playbackRate)
+          if (Number.isFinite(rate)) publish({ ...prev, playbackRate: rate, updatedAt: now })
+          return
+        }
         if (payload.type === 'cinesrc:response') {
           let next = null
-          if (payload.command === 'getCurrentTime' && Number.isFinite(Number(payload.result))) {
-            next = { ...prev, time: Number(payload.result), updatedAt: now }
-          } else if (payload.command === 'getDuration' && Number.isFinite(Number(payload.result))) {
-            next = { ...prev, duration: Number(payload.result), updatedAt: now }
-          } else if (payload.command === 'getPaused' && typeof payload.result === 'boolean') {
-            next = { ...prev, paused: payload.result, updatedAt: now }
-          }
-          if (next) {
-            stateRef.current = next
-            lastMessageAtRef.current = now
-            listenersRef.current.forEach((fn) => { try { fn(next) } catch {} })
-          }
+          if (payload.command === 'getCurrentTime' && Number.isFinite(Number(payload.result))) next = { ...prev, time: Number(payload.result), updatedAt: now }
+          else if (payload.command === 'getDuration' && Number.isFinite(Number(payload.result))) next = { ...prev, duration: Number(payload.result), updatedAt: now }
+          else if (payload.command === 'getPaused' && typeof payload.result === 'boolean') next = { ...prev, paused: payload.result, updatedAt: now }
+          else if (payload.command === 'getVolume' && Number.isFinite(Number(payload.result))) next = { ...prev, volume: Math.min(1, Math.max(0, Number(payload.result))), updatedAt: now }
+          else if (payload.command === 'getMuted' && typeof payload.result === 'boolean') next = { ...prev, muted: payload.result, updatedAt: now }
+          else if (payload.command === 'getPlaybackRate' && Number.isFinite(Number(payload.result))) next = { ...prev, playbackRate: Number(payload.result), updatedAt: now }
+          if (next) publish(next)
         }
         return
       }
@@ -204,22 +245,18 @@ export function usePlayerBridge({ iframeRef, playerUrl, active = true }) {
         if (prev.updatedAt) {
           const elapsed = (now - prev.updatedAt) / 1000
           paused = parsed.time - prev.time <= Math.max(0.15, elapsed * 0.15)
-        } else {
-          paused = true
-        }
+        } else paused = true
       }
-      const next = {
+      publish({
+        ...prev,
         time: parsed.time,
         duration: parsed.duration || prev.duration,
         paused,
         updatedAt: now,
-      }
-      stateRef.current = next
-      lastMessageAtRef.current = now
+      })
       clearFallbackTimer()
       setReady(true)
       setHasTelemetry(true)
-      listenersRef.current.forEach((fn) => { try { fn(next) } catch {} })
     }
 
     window.addEventListener('message', onMessage)
@@ -227,10 +264,23 @@ export function usePlayerBridge({ iframeRef, playerUrl, active = true }) {
       window.removeEventListener('message', onMessage)
       clearFallbackTimer()
     }
-  }, [active, playerUrl, playerOrigin, isCineSrc, iframeRef])
+  }, [active, playerUrl, playerOrigin, isCineSrc, iframeRef, publish])
 
-  return useMemo(
-    () => ({ ready, hasTelemetry, error, getState, getLastMessageAt, getMediaData, subscribe, play, pause, seek }),
-    [ready, hasTelemetry, error, getState, getLastMessageAt, getMediaData, subscribe, play, pause, seek]
-  )
+  return useMemo(() => ({
+    ready,
+    hasTelemetry,
+    error,
+    closed,
+    getState,
+    getLastMessageAt,
+    getMediaData,
+    subscribe,
+    play,
+    pause,
+    seek,
+    setVolume,
+    setMuted,
+    setPlaybackRate,
+    refresh,
+  }), [ready, hasTelemetry, error, closed, getState, getLastMessageAt, getMediaData, subscribe, play, pause, seek, setVolume, setMuted, setPlaybackRate, refresh])
 }
