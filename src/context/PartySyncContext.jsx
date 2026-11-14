@@ -70,13 +70,40 @@ export function PartySyncProvider({ children }) {
   }, [])
 
   const connect = useCallback((code, name, media) => {
-    const wsUrl = import.meta.env.VITE_PARTY_WS_URL || 'ws://localhost:8787'
+    const configuredUrl = import.meta.env.VITE_PARTY_WS_URL
+    const localDevelopmentUrl = import.meta.env.DEV ? 'ws://localhost:8787' : ''
+    const rawUrl = configuredUrl || localDevelopmentUrl
+
+    if (!rawUrl) {
+      setConnected(false)
+      setReconnecting(false)
+      setError('Watch Party is not configured for this deployment. Add the VITE_PARTY_WS_URL repository secret with your Cloudflare Worker URL, then redeploy.')
+      return
+    }
+
+    let socketUrl
+    try {
+      const endpoint = new URL(rawUrl)
+      if (endpoint.protocol === 'https:') endpoint.protocol = 'wss:'
+      if (endpoint.protocol === 'http:') endpoint.protocol = 'ws:'
+      if (!['ws:', 'wss:'].includes(endpoint.protocol)) throw new Error('Use an https:// or wss:// Worker URL.')
+      endpoint.pathname = `${endpoint.pathname.replace(/\\/+$/, '')}/party/${encodeURIComponent(code)}`
+      endpoint.search = ''
+      endpoint.hash = ''
+      socketUrl = endpoint.toString()
+    } catch (urlError) {
+      setConnected(false)
+      setReconnecting(false)
+      setError(`Invalid Watch Party server URL: ${urlError.message}`)
+      return
+    }
+
     joinParamsRef.current = { code, name, media }
     intentionalCloseRef.current = false
     reconnectAttemptsRef.current = 0
 
     const openSocket = () => {
-      const ws = new WebSocket(`${wsUrl}/party/${code}`)
+      const ws = new WebSocket(socketUrl)
       wsRef.current = ws
 
       ws.onopen = () => {
