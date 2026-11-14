@@ -342,6 +342,21 @@ export async function getDetails(mediaType, id) {
   return normalizeMedia({ ...raw, external_ids: externalIds }, mediaType)
 }
 
+export async function getWatchProviders(mediaType, id, country) {
+  if (!hasApiKey() || !country) return null
+  const response = await api.watchProviders(mediaType, id)
+  const region = response?.results?.[country]
+  if (!region) return null
+  const unique = new Map()
+  for (const key of ['flatrate', 'free', 'ads', 'rent', 'buy']) {
+    for (const provider of region[key] || []) unique.set(provider.provider_id, provider)
+  }
+  return {
+    link: region.link || null,
+    providers: [...unique.values()].sort((a, b) => (a.display_priority || 999) - (b.display_priority || 999)),
+  }
+}
+
 export async function getOmdbDetails(imdbId, apiKey) {
   if (!imdbId || !apiKey) return null
   const url = new URL('https://www.omdbapi.com/')
