@@ -83,8 +83,19 @@ export function PartySyncProvider({ children }) {
     roomJoinedRef.current = false
 
     let savedWorkerUrl = ''
-    try { savedWorkerUrl = window.localStorage.getItem('royversemoviez.party-ws-url') || '' } catch {}
-    const configuredUrl = import.meta.env.VITE_PARTY_WS_URL || savedWorkerUrl
+    try {
+      const storedValue = window.localStorage.getItem('royversemoviez.party-ws-url') || ''
+      if (storedValue) {
+        try {
+          const parsedValue = JSON.parse(storedValue)
+          savedWorkerUrl = typeof parsedValue === 'string' ? parsedValue : ''
+        } catch {
+          // Accept a plain-text URL from older/manual settings too.
+          savedWorkerUrl = storedValue
+        }
+      }
+    } catch {}
+    const configuredUrl = String(import.meta.env.VITE_PARTY_WS_URL || savedWorkerUrl || '').trim().replace(/^['"]|['"]$/g, '')
     const localDevelopmentUrl = import.meta.env.DEV ? 'ws://localhost:8787' : ''
     const rawUrl = configuredUrl || localDevelopmentUrl
 
