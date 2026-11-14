@@ -688,10 +688,6 @@ function PlayerView({
         ) : (
           <PlayerEmbed mediaType={mediaType} id={id} season={season} episode={episode} title={media.title} iframeRef={playerIframeRef} />
         )}
-
-        {mode === 'content' && providerId === 'cinesrc' && bridge.ready && (
-          <PlayerControls bridge={bridge} onFullscreen={toggleFullscreen} />
-        )}
       </div>
 
       <div className="mx-auto w-full max-w-screen-2xl px-4 py-5 sm:px-6 sm:py-7 lg:px-10">
@@ -773,85 +769,3 @@ function PlayerView({
   )
 }
 
-function PlayerControls({ bridge, onFullscreen }) {
-  const [state, setState] = useState(() => bridge.getState())
-
-  useEffect(() => {
-    setState(bridge.getState())
-    return bridge.subscribe((next) => setState({ ...next }))
-  }, [bridge.getState, bridge.subscribe])
-
-  const duration = Math.max(0, Number(state.duration) || 0)
-  const currentTime = Math.min(duration || Number(state.time) || 0, Math.max(0, Number(state.time) || 0))
-  const volume = Math.min(1, Math.max(0, Number(state.volume) || 0))
-  const paused = state.paused !== false
-
-  return (
-    <div className="absolute inset-x-0 bottom-0 z-20 bg-gradient-to-t from-black via-black/85 to-transparent px-3 pb-3 pt-12 opacity-100 transition-opacity duration-200 lg:opacity-0 lg:group-hover:opacity-100 lg:group-focus-within:opacity-100">
-      <input
-        type="range"
-        min="0"
-        max={Math.max(duration, 1)}
-        step="1"
-        value={Math.min(currentTime, Math.max(duration, 1))}
-        onChange={(event) => bridge.seek(Number(event.target.value))}
-        aria-label="Seek"
-        className="mb-2 block h-1.5 w-full cursor-pointer accent-brand"
-      />
-      <div className="flex items-center justify-between gap-2 text-white">
-        <div className="flex min-w-0 items-center gap-1.5 sm:gap-2">
-          <button onClick={() => paused ? bridge.play() : bridge.pause()} className="grid h-8 w-8 shrink-0 place-items-center rounded-full hover:bg-white/15" aria-label={paused ? 'Play' : 'Pause'}>
-            <span className="text-base leading-none">{paused ? '▶' : 'Ⅱ'}</span>
-          </button>
-          <button onClick={() => bridge.seek(Math.max(0, currentTime - 10))} className="hidden h-8 shrink-0 rounded px-1 text-[10px] font-bold hover:bg-white/15 sm:block" aria-label="Back 10 seconds">−10</button>
-          <button onClick={() => bridge.seek(Math.min(duration || currentTime + 10, currentTime + 10))} className="hidden h-8 shrink-0 rounded px-1 text-[10px] font-bold hover:bg-white/15 sm:block" aria-label="Forward 10 seconds">+10</button>
-          <span className="whitespace-nowrap text-[10px] font-semibold tabular-nums sm:text-xs">{formatClock(currentTime)} / {formatClock(duration)}</span>
-        </div>
-        <div className="flex shrink-0 items-center gap-1 sm:gap-2">
-          <button onClick={() => bridge.setMuted(!state.muted)} className="grid h-8 w-8 place-items-center rounded-full text-sm hover:bg-white/15" aria-label={state.muted ? 'Unmute' : 'Mute'} title={state.muted ? 'Unmute' : 'Mute'}>
-            {state.muted || volume === 0 ? '🔇' : '🔊'}
-          </button>
-          <input
-            type="range"
-            min="0"
-            max="1"
-            step="0.05"
-            value={state.muted ? 0 : volume}
-            onChange={(event) => bridge.setVolume(Number(event.target.value))}
-            aria-label="Volume"
-            className="hidden h-1 w-16 cursor-pointer accent-brand sm:block"
-          />
-          <select value={Number(state.playbackRate) || 1} onChange={(event) => bridge.setPlaybackRate(Number(event.target.value))}
-            className="h-8 rounded bg-black/55 px-1.5 text-[10px] font-bold text-white outline-none sm:text-xs" aria-label="Playback speed">
-            {[0.75, 1, 1.25, 1.5, 1.75, 2].map((rate) => <option key={rate} value={rate}>{rate}×</option>)}
-          </select>
-          <button onClick={onFullscreen} className="grid h-8 w-8 place-items-center rounded-full hover:bg-white/15" aria-label="Fullscreen" title="Fullscreen">
-            <FullscreenIcon className="h-4 w-4" />
-          </button>
-        </div>
-      </div>
-    </div>
-  )
-}
-
-function PageMessage({ children }) {
-  return <div className="flex min-h-screen items-center justify-center bg-ink text-mist">{children}</div>
-}
-
-function formatDuration(runtime) {
-  if (!runtime) return null
-  return `${runtime >= 60 ? `${Math.floor(runtime / 60)}h ` : ''}${runtime % 60}m`
-}
-
-function formatClock(seconds) {
-  const total = Math.floor(seconds)
-  const pad = (n) => String(n).padStart(2, '0')
-  const h = Math.floor(total / 3600)
-  const m = Math.floor((total % 3600) / 60)
-  const s = total % 60
-  return h > 0 ? `${h}:${pad(m)}:${pad(s)}` : `${m}:${pad(s)}`
-}
-
-function initials(name) {
-  return String(name).split(/\s+/).filter(Boolean).map((word) => word[0]).slice(0, 2).join('').toUpperCase()
-}
