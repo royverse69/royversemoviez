@@ -161,7 +161,7 @@ This repository includes a GitHub Actions workflow at `.github/workflows/deploy.
 
 For a root-domain deployment (Vercel, Netlify, or a custom domain), build with `VITE_BASE_PATH=/ npm run build` and configure the host to serve `dist/` with an SPA fallback to `index.html`. When deploying under a different project subpath, set `VITE_BASE_PATH=/your-repository-name/` before building. Do not publish the repository's source-root `index.html` directly: it is the Vite development entry and points at `src/main.jsx`; production hosting must serve the compiled `dist/` output.
 
-TMDB works out of the box via the built-in key; set `VITE_TMDB_API_KEY` only to use your own (see “TMDB API key”). For watch parties set `VITE_PARTY_WS_URL` to your deployed worker.
+TMDB works out of the box via the built-in key; set `VITE_TMDB_API_KEY` only to use your own (see “TMDB API key”). For Watch Party, deploy the Worker in `server/` with `npx wrangler deploy`, copy its `https://<worker-subdomain>.workers.dev` URL, then add a GitHub Actions repository secret named `VITE_PARTY_WS_URL` with that URL (GitHub → Settings → Secrets and variables → Actions → New repository secret). The Pages workflow injects this value into the production build and the app converts `https://` to `wss://` for WebSocket connections. Without this secret, Watch Party will show a configuration error rather than trying to connect to localhost. See `.env.example` for local development.
 
 ---
 
