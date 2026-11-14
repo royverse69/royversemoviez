@@ -199,80 +199,69 @@ function PartyRoomContent() {
   ]
 
   return (
-    <div className="flex h-screen flex-col bg-ink">
-      <div className="flex min-h-12 items-center justify-between border-b border-white/10 bg-ink px-4 pt-14">
-        <div className="flex items-center gap-2">
+    <div className="flex min-h-[100dvh] flex-col bg-ink pt-14 lg:box-border lg:h-[100dvh] lg:min-h-0 lg:overflow-hidden">
+      <header className="flex min-h-14 shrink-0 items-center justify-between gap-3 border-b border-white/10 bg-[#080808] px-3 py-2 sm:px-5">
+        <div className="flex min-w-0 items-center gap-2.5">
           <button
             onClick={handleLeave}
-            className="inline-flex items-center gap-1 text-xs font-bold text-cream/80 transition-colors hover:text-white"
+            className="inline-flex min-h-10 shrink-0 items-center gap-1.5 rounded-full px-2 text-xs font-bold text-cream/80 transition hover:bg-white/10 hover:text-white"
           >
-            &larr; Leave Party
+            <span aria-hidden="true">←</span>
+            <span className="hidden sm:inline">Leave Party</span>
+            <span className="sm:hidden">Leave</span>
           </button>
-          {partyMedia && (
-            <>
-              <span className="mx-1 text-mist">·</span>
-              <span className="text-xs font-bold text-white">{partyMedia.title}</span>
-              {partyMedia.season && (
-                <span className="text-xs text-mist">
-                  S{partyMedia.season} E{partyMedia.episode}
-                </span>
-              )}
-            </>
-          )}
+          <span className="h-5 w-px shrink-0 bg-white/15" />
+          <div className="min-w-0">
+            <p className="truncate text-xs font-black text-white sm:text-sm">{partyMedia?.title || 'Watch Party'}</p>
+            <p className="truncate text-[9px] font-bold uppercase tracking-[.16em] text-mist">
+              {partyMedia?.season ? `Season ${partyMedia.season} · Episode ${partyMedia.episode} · ` : ''}
+              Room {roomCode}
+            </p>
+          </div>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex shrink-0 items-center gap-2">
           {reconnecting && (
-            <span className="rounded-full bg-amber-500/15 px-2.5 py-1 text-[9px] font-black uppercase tracking-wider text-amber-400">
-              Reconnecting
-            </span>
+            <span className="rounded-full bg-amber-500/15 px-2.5 py-1 text-[9px] font-black uppercase tracking-wider text-amber-400">Reconnecting</span>
           )}
           {shareActive && (
             <span className="flex items-center gap-1.5 rounded-full bg-red-500/15 px-2.5 py-1 text-[9px] font-black uppercase tracking-wider text-red-400">
-              <span className="relative flex h-1.5 w-1.5">
-                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-red-500 opacity-60" />
-                <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-red-500" />
-              </span>
+              <span className="relative flex h-1.5 w-1.5"><span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-red-500 opacity-60" /><span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-red-500" /></span>
               Live
             </span>
           )}
           {!isHost && role === 'member' && !shareActive && (
-            <span className="rounded-full bg-brand/15 px-2.5 py-1 text-[9px] font-black uppercase tracking-wider text-brand">
-              Watching as member
-            </span>
+            <span className="rounded-full bg-brand/15 px-2.5 py-1 text-[9px] font-black uppercase tracking-wider text-brand">Member</span>
           )}
+          <span className="hidden rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-[9px] font-bold text-mist sm:inline-flex">
+            {participants.length} watching
+          </span>
         </div>
-      </div>
+      </header>
 
       {error && (
-        <div className="flex items-center justify-between border-b border-red-500/20 bg-red-500/10 px-4 py-2">
-          <p className="text-xs font-bold text-red-400">{error}</p>
-          <button onClick={clearError} className="text-red-400 transition-colors hover:text-white">&times;</button>
+        <div className="flex shrink-0 items-center justify-between border-b border-red-500/20 bg-red-500/10 px-4 py-2">
+          <p className="text-xs font-bold text-red-300">{error}</p>
+          <button onClick={clearError} className="ml-3 text-red-300 transition-colors hover:text-white" aria-label="Dismiss error">×</button>
         </div>
       )}
 
-      <div className="flex min-h-0 flex-1 overflow-hidden">
-        {/* Left column: video fills available space, dock sits compact below */}
-        <div className="flex min-w-0 flex-1 flex-col">
-          <div className="relative min-h-0 flex-1 bg-black">
+      <div className="flex min-h-0 flex-1 flex-col overflow-y-auto lg:flex-row lg:overflow-hidden">
+        <main className="flex min-w-0 flex-col lg:min-h-0 lg:flex-1">
+          <div className="relative aspect-video w-full shrink-0 bg-black lg:aspect-auto lg:min-h-0 lg:flex-1">
             {partyProvider !== 'cinesrc' && !memberViewingShare && (
               <div className="absolute left-3 top-3 z-20 rounded-full border border-amber-300/20 bg-black/75 px-3 py-1.5 text-[10px] font-bold text-amber-100 backdrop-blur">
                 CineSrc unavailable · using VidCore backup
               </div>
             )}
+
             {memberViewingShare ? (
               remoteStream ? (
-                <video
-                  ref={viewerVideoRef}
-                  className="h-full w-full"
-                  autoPlay
-                  playsInline
-                  controls
-                />
+                <video ref={viewerVideoRef} className="h-full w-full object-contain" autoPlay playsInline controls />
               ) : (
                 <div className="flex h-full flex-col items-center justify-center gap-3 text-mist">
                   <div className="h-8 w-8 animate-spin rounded-full border-2 border-white/10 border-t-brand" />
                   <p className="text-sm font-bold">Connecting to host stream...</p>
-                  {viewerError && <p className="text-xs text-red-400">{viewerError}</p>}
+                  {viewerError && <p className="px-4 text-center text-xs text-red-400">{viewerError}</p>}
                 </div>
               )
             ) : playerUrl ? (
@@ -281,13 +270,10 @@ function PartyRoomContent() {
                 key={playerUrl}
                 src={playerUrl}
                 title={partyMedia?.title || 'Party player'}
-                className="h-full w-full border-0"
-                allow="autoplay; fullscreen; picture-in-picture; encrypted-media"
+                className="absolute inset-0 h-full w-full border-0"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
                 allowFullScreen
-                style={{
-                  pointerEvents:
-                    isHost || playback.status === 'blocked' ? 'auto' : 'none',
-                }}
+                style={{ pointerEvents: isHost || playback.status === 'blocked' ? 'auto' : 'none' }}
               />
             ) : (
               <div className="flex h-full flex-col items-center justify-center gap-3 text-mist">
@@ -297,11 +283,8 @@ function PartyRoomContent() {
             )}
 
             {isHost && sharing && (
-              <div className="absolute left-3 top-3 z-10 flex items-center gap-2 rounded-full bg-black/70 px-4 py-2 backdrop-blur">
-                <span className="relative flex h-2 w-2">
-                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-red-500 opacity-60" />
-                  <span className="relative inline-flex h-2 w-2 rounded-full bg-red-500" />
-                </span>
+              <div className="absolute left-3 top-3 z-20 flex items-center gap-2 rounded-full bg-black/75 px-3 py-2 backdrop-blur">
+                <span className="relative flex h-2 w-2"><span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-red-500 opacity-60" /><span className="relative inline-flex h-2 w-2 rounded-full bg-red-500" /></span>
                 <span className="text-[10px] font-black uppercase tracking-wider text-white">
                   Sharing to {Math.max(0, participants.length - 1)} member{participants.length - 1 === 1 ? '' : 's'}
                 </span>
@@ -309,30 +292,22 @@ function PartyRoomContent() {
             )}
 
             {!isHost && !shareActive && (
-              <div className="pointer-events-none absolute inset-x-0 bottom-0 z-10 flex justify-center p-4">
-                <div className="rounded-full bg-black/60 px-4 py-1.5 text-[10px] font-black uppercase tracking-wider text-mist backdrop-blur">
-                  {playback.status === 'blocked' && (
-                    <span className="text-amber-400">Tap play once — sync takes over</span>
-                  )}
-                  {playback.status === 'unavailable' && (
-                    <span>Sync unavailable — host can screen-share instead</span>
-                  )}
+              <div className="pointer-events-none absolute inset-x-0 bottom-0 z-10 flex justify-center p-3">
+                <div className="rounded-full border border-white/10 bg-black/70 px-3 py-1.5 text-[9px] font-black uppercase tracking-wider text-mist backdrop-blur sm:text-[10px]">
+                  {playback.status === 'blocked' && <span className="text-amber-300">Tap play once to unlock synced playback</span>}
+                  {playback.status === 'unavailable' && <span>Player sync unavailable · host can screen-share</span>}
                   {playback.status === 'syncing' && <span>Syncing with host…</span>}
-                  {playback.status === 'synced' && (
-                    <span className="text-emerald-400">In sync · host controls playback</span>
-                  )}
-                  {(playback.status === 'idle' || playback.status === 'host') && (
-                    <span>Host controls playback</span>
-                  )}
+                  {playback.status === 'synced' && <span className="text-emerald-300">In sync · host controls playback</span>}
+                  {(playback.status === 'idle' || playback.status === 'host') && <span>Host controls playback</span>}
                 </div>
               </div>
             )}
           </div>
 
           {isHost && sharing && (
-            <div className="shrink-0 px-4 py-2">
-              <p className="text-[10px] font-bold text-mist">
-                Tip: keep your movie tab fully visible for the cleanest stream. Members see exactly what you see.
+            <div className="shrink-0 border-b border-white/10 bg-[#0b0b0b] px-3 py-2 sm:px-5">
+              <p className="text-[10px] font-semibold text-mist">
+                Keep the video tab visible while sharing. Members see the host’s shared screen.
               </p>
             </div>
           )}
@@ -355,32 +330,27 @@ function PartyRoomContent() {
             onRequestQuality={handleMemberQuality}
             shareActive={shareActive}
           />
-        </div>
+        </main>
 
-        {/* Right rail: tabs */}
-        <aside className="hidden w-80 shrink-0 flex-col border-l border-white/10 bg-ink lg:flex">
-          <div className="flex border-b border-white/10">
+        <aside className="flex min-h-[340px] shrink-0 flex-col border-t border-white/10 bg-[#0c0c0c] lg:min-h-0 lg:w-[340px] lg:border-l lg:border-t-0 xl:w-[380px]">
+          <div className="flex shrink-0 border-b border-white/10 bg-[#101010] px-2">
             {tabs.map((tab) => (
               <button
                 key={tab.key}
                 onClick={() => setActiveTab(tab.key)}
-                className={`relative flex-1 px-3 py-3 text-[10px] font-black uppercase tracking-widest transition-colors ${
-                  activeTab === tab.key ? 'bg-white/5 text-white' : 'text-mist hover:text-white'
+                className={`relative flex min-h-12 flex-1 items-center justify-center gap-1.5 px-2 text-[10px] font-black uppercase tracking-[.14em] transition-colors sm:text-xs ${
+                  activeTab === tab.key ? 'text-white' : 'text-mist hover:text-white'
                 }`}
+                aria-pressed={activeTab === tab.key}
               >
                 {tab.label}
-                {tab.badge && (
-                  <span className="absolute right-2 top-2 min-w-4 rounded-full bg-brand px-1 text-center text-[8px] font-black leading-4 text-white">
-                    {tab.badge}
-                  </span>
-                )}
-                {activeTab === tab.key && (
-                  <span className="absolute inset-x-0 bottom-0 h-0.5 bg-brand" />
-                )}
+                {tab.badge && <span className="rounded-full bg-brand px-1.5 py-0.5 text-[9px] leading-none text-white">{tab.badge}</span>}
+                {activeTab === tab.key && <span className="absolute inset-x-3 bottom-0 h-0.5 rounded-full bg-brand" />}
               </button>
             ))}
+            <span className="ml-2 flex shrink-0 items-center px-2 text-[9px] font-bold text-mist">{participants.length} online</span>
           </div>
-          <div className="min-h-0 flex-1 overflow-hidden">
+          <div className="min-h-[285px] flex-1 overflow-hidden lg:min-h-0">
             {activeTab === 'chat' && (
               <ChatPanel
                 chatMessages={chatMessages}
@@ -400,9 +370,7 @@ function PartyRoomContent() {
                 onLeave={handleLeave}
               />
             )}
-            {activeTab === 'search' && isHost && (
-              <SearchPanel onChangeMedia={setRoomMedia} />
-            )}
+            {activeTab === 'search' && isHost && <SearchPanel onChangeMedia={setRoomMedia} />}
           </div>
         </aside>
       </div>
