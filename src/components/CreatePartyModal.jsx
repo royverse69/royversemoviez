@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { searchMedia, getSeasonEpisodes } from '../api/dataService.js'
 import { posterUrl } from '../api/tmdb.js'
 import { useData } from '../hooks/useData.js'
+import { useLocalStorage } from '../hooks/useLocalStorage.js'
 import { SpinnerIcon } from './icons.jsx'
 
 const generateCode = () => {
@@ -19,6 +20,7 @@ export default function CreatePartyModal({ onClose, onCreate }) {
   const [season, setSeason] = useState(1)
   const [episode, setEpisode] = useState(1)
   const [creating, setCreating] = useState(false)
+  const [omdbApiKey] = useLocalStorage('royversemoviez.omdb-api-key', '')
   const debounceRef = useRef(null)
 
   useEffect(() => {
@@ -28,8 +30,8 @@ export default function CreatePartyModal({ onClose, onCreate }) {
   }, [searchQuery])
 
   const { data: results, loading: searching } = useData(
-    () => (debouncedQuery ? searchMedia(debouncedQuery).catch(() => []) : Promise.resolve([])),
-    [debouncedQuery]
+    () => (debouncedQuery ? searchMedia(debouncedQuery, 1, { omdbApiKey }).catch(() => []) : Promise.resolve([])),
+    [debouncedQuery, omdbApiKey]
   )
 
   const { data: episodes } = useData(
