@@ -27,7 +27,7 @@ Browse a real, live catalog from the **TMDB API**, discover titles through rows/
 
 ### 🎉 Watch Party (`/party`)
 - **Create/join rooms** with a shareable 6-char code and link.
-- **Host-driven playback sync** — the host's play/pause/seek is broadcast to every member and applied to their players via the VidFast postMessage API, with drift correction and a **Request Sync** button for late joiners. If the host's browser blocks member autoplay, members get a one-tap unlock; if a title exposes no player telemetry, the room falls back to screen share.
+- **Host-driven playback sync** — the host's play/pause/seek is broadcast to every member and applied through the active provider's player messaging API, with drift correction and a **Request Sync** button for late joiners. If the host's browser blocks member autoplay, members get a one-tap unlock; if a title exposes no player telemetry, the room falls back to screen share.
 - **Host migration** — if the host leaves, the next member is promoted automatically.
 - **Screen share** — WebRTC host→member broadcast with quality presets and live stream stats.
 - **Voice chat** + **text chat** + participants panel.
@@ -151,7 +151,7 @@ npm run lint      # oxlint
 - **Vite 8**
 - **Tailwind CSS v4** (CSS-first `@theme` config — no tailwind.config.js)
 - **TMDB API** (free key) — catalog, genres, search, videos, credits
-- Embedded providers — VidCore, VidFast
+- Embedded providers — CineSrc (primary), VidCore, VidFast, and VidRock (backups)
 
 ---
 
