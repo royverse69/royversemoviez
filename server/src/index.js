@@ -356,7 +356,7 @@ export default {
       })
     }
 
-    const roomCode = url.pathname.match(/^\\/party\\/([A-Za-z0-9]+)$/)?.[1]?.toUpperCase()
+    const roomCode = url.pathname.match(/^\/party\/([A-Za-z0-9]+)$/)?.[1]?.toUpperCase()
     if (!roomCode) {
       return json({ ok: false, error: 'Room code required in URL path: /party/:code' }, 400)
     }
