@@ -134,7 +134,7 @@ function ContinueWatchingRow({ items }) {
 
 function HistoryCard({ entry }) {
   return (
-    <div className="w-[230px] shrink-0">
+    <div className="w-[clamp(112px,28vw,184px)] shrink-0">
       <MovieCard
         media={entry}
         getPath={watchPath}
