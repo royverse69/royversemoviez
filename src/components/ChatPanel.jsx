@@ -24,7 +24,7 @@ export default function ChatPanel({
   return (
     <div className="flex h-full flex-col">
       {/* Voice bar */}
-      <div className="border-b border-white/10 px-3 py-3">
+      <div className="border-b border-white/10 px-3 py-2.5 sm:py-3">
         <div className="flex items-center gap-3">
           <button
             onClick={voiceOn ? stopVoice : startVoice}
@@ -81,7 +81,7 @@ export default function ChatPanel({
       </div>
 
       {/* Composer */}
-      <div className="border-t border-white/10 p-3">
+      <div className="border-t border-white/10 p-2.5 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:p-3">
         <div className="flex gap-2">
           <input
             type="text"
@@ -90,12 +90,12 @@ export default function ChatPanel({
             onKeyDown={(e) => e.key === 'Enter' && send()}
             placeholder="Message the room..."
             maxLength={500}
-            className="min-w-0 flex-1 rounded-lg border border-white/15 bg-surface px-3 py-2 text-xs font-semibold text-white outline-none placeholder:text-mist/50 focus:border-brand"
+            className="min-h-10 min-w-0 flex-1 rounded-lg border border-white/15 bg-surface px-3 py-2 text-xs font-semibold text-white outline-none placeholder:text-mist/50 focus:border-brand"
           />
           <button
             onClick={send}
             disabled={!draft.trim()}
-            className="shrink-0 rounded-lg bg-brand px-4 py-2 text-[10px] font-black uppercase tracking-wider text-white transition-colors hover:bg-brand-dark disabled:opacity-40"
+            className="min-h-10 shrink-0 rounded-lg bg-brand px-4 py-2 text-[10px] font-black uppercase tracking-wider text-white transition-colors hover:bg-brand-dark disabled:opacity-40"
           >
             Send
           </button>
