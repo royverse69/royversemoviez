@@ -13,6 +13,7 @@ export default function SettingsPage() {
   const { items } = useMyList()
   const { country, setCountry } = usePreferences()
   const [partyWorkerUrl, setPartyWorkerUrl] = useLocalStorage('royversemoviez.party-ws-url', '')
+  const [omdbApiKey, setOmdbApiKey] = useLocalStorage('royversemoviez.omdb-api-key', '')
   const [draft, setDraft] = useState(apiKey)
   const [showKey, setShowKey] = useState(false)
   const [saving, setSaving] = useState(false)
@@ -173,6 +174,31 @@ export default function SettingsPage() {
             Worker docs ↗
           </a>
         </div>
+      </div>
+
+      {/* IMDb ratings via OMDb */}
+      <div className="mt-6 rounded-2xl border border-white/12 bg-surface p-4 sm:p-5">
+        <div>
+          <h2 className="text-lg font-extrabold text-white">IMDb Ratings</h2>
+          <p className="mt-0.5 text-xs text-mist">Optional rating and vote-count enrichment for title details</p>
+        </div>
+        <label className="mt-5 block text-[10px] font-black uppercase tracking-[0.16em] text-mist">OMDb API key</label>
+        <input
+          type="password"
+          value={omdbApiKey}
+          onChange={(event) => setOmdbApiKey(event.target.value.trim())}
+          placeholder="Enter your OMDb API key"
+          autoCapitalize="none"
+          autoComplete="off"
+          spellCheck={false}
+          className="mt-2 min-h-12 w-full rounded-lg border border-white/12 bg-[#0d0d0d] px-3.5 text-sm text-white outline-none placeholder:text-mist/60 focus:border-brand"
+        />
+        <p className="mt-2 text-[10px] leading-relaxed text-mist">
+          An optional OMDb key adds IMDb rating, vote count and content rating to title pages. The key stays in this browser. OMDb is an independent, non-commercial data service and is not affiliated with IMDb.
+        </p>
+        <a href="https://www.omdbapi.com/apikey.aspx" target="_blank" rel="noreferrer" className="mt-3 inline-flex min-h-10 items-center rounded-lg border border-white/15 px-4 text-xs font-bold text-cream transition hover:bg-white/5">
+          Get an OMDb API key ↗
+        </a>
       </div>
 
       {/* Content Country Card */}
