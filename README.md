@@ -1,10 +1,8 @@
 # RoyverseMoviez 🎬
 
-**Made by AshutoshRoy**
-
 A cinematic, Netflix-inspired **movie & TV discovery and streaming web app** built with **React 19 + Vite + Tailwind CSS v4**.
 
-Browse a real, live catalog from the **TMDB API**, discover titles through rows/genres/search, and **stream directly in the browser** via embedded players with **switchable providers** (VidCore + VidFast) — including full **season & episode selection** for TV series, and **cast details** on every watch page.
+Browse a real, live catalog from the **TMDB API**, discover titles through rows/genres/search, and **stream directly in the browser** via embedded players with CineSrc as primary and VidCore, VidFast, and VidRock as fallbacks — including full **season & episode selection** for TV series, and **cast details** on every watch page.
 
 > This product uses the TMDB API but is not endorsed or certified by TMDB.
 
@@ -22,7 +20,7 @@ Browse a real, live catalog from the **TMDB API**, discover titles through rows/
 
 ### ▶ Streaming
 - **Embedded playback** — open any title to a `/watch/:type/:id` page with an in-page player.
-- **Two providers, one dropdown** — switch between **VidCore** and **VidFast**; selection persists in `localStorage` and rebuilds the embed instantly.
+- **Primary + backup playback** — CineSrc loads first; if it errors or does not become ready, the player switches to VidCore. VidFast and VidRock remain selectable backups.
 - **Movies** — direct embed by TMDB id.
 - **Series** — season & episode dropdowns; player URL rebuilds to the exact episode.
 - **Poster zoom cards** — click a card to open a quick-info modal with trailer, or hit **Watch Now** to go straight to streaming.
@@ -91,13 +89,14 @@ The key travels directly from the browser to TMDB. If all keys fail, the app fal
 
 ## 🔌 Streaming providers
 
-Provider embeds are normalized in `src/data/providers.js`:
+CineSrc is the primary embed and uses TMDB IDs with `https://cinesrc.st/embed/movie/{tmdb_id}` or `https://cinesrc.st/embed/tv/{tmdb_id}?s={season}&e={episode}`. Provider embeds are normalized in `src/data/providers.js`.
 
 | Provider | Movie | TV |
 |---|---|---|
-| **VidCore** (default) | `vidcore.net/movie/{tmdbId}` | `vidcore.net/tv/{tmdbId}/{s}/{e}` |
-| **VidFast** | `vidfast.vc/movie/{tmdbId}` | `vidfast.vc/tv/{tmdbId}/{s}/{e}` |
-| **VidRock** | `vidrock.net/movie/{tmdbId}` | `vidrock.net/tv/{tmdbId}/{s}/{e}` |
+| **CineSrc** (primary) | `cinesrc.st/embed/movie/{tmdb_id}` | `cinesrc.st/embed/tv/{tmdb_id}?s={s}&e={e}` |
+| **VidCore** (backup) | `vidcore.net/movie/{tmdbId}` | `vidcore.net/tv/{tmdbId}/{s}/{e}` |
+| **VidFast** (backup) | `vidfast.vc/movie/{tmdbId}` | `vidfast.vc/tv/{tmdbId}/{s}/{e}` |
+| **VidRock** (backup) | `vidrock.net/movie/{tmdbId}` | `vidrock.net/tv/{tmdbId}/{s}/{e}` |
 
 Adding a provider is one entry in the `PROVIDERS` array — the dropdown, persistence and embed rebuild pick it up automatically.
 
@@ -158,7 +157,7 @@ npm run lint      # oxlint
 
 ## 📦 Deploy
 
-This repository includes a GitHub Actions workflow at `.github/workflows/deploy.yml`. **Important:** GitHub Pages must use **Source: GitHub Actions**. Do not use `Deploy from a branch`: the repository-root `index.html` is the Vite development entry (`/src/main.jsx`), not the production website. Only the custom workflow should publish the compiled `dist/` directory. For GitHub Pages, push the repository to the `main` branch, then open **Settings → Pages → Build and deployment** and set **Source** to **GitHub Actions**. The workflow installs dependencies, runs the Vite production build, and deploys the generated `dist/` directory. The default production base path is `/royversemoviez/`, matching this repository name.
+This repository includes a GitHub Actions workflow at `.github/workflows/deploy.yml`. **Important:** GitHub Pages must use **Source: GitHub Actions**. Do not use `Deploy from a branch`: the repository-root `index.html` is the Vite development entry (`/src/main.jsx`), not the production website. Only the custom workflow should publish the compiled `dist/` directory. For GitHub Pages, push the repository to the `main` branch, then open **Settings → Pages → Build and deployment** and set **Source** to **GitHub Actions**. The workflow installs dependencies, runs the Vite production build, and deploys the generated `dist/` directory. The default production base path is `/royversemoviez/`, matching this repository name. A PWA service worker caches the app shell and TMDB artwork only, never third-party video streams.
 
 For a root-domain deployment (Vercel, Netlify, or a custom domain), build with `VITE_BASE_PATH=/ npm run build` and configure the host to serve `dist/` with an SPA fallback to `index.html`. When deploying under a different project subpath, set `VITE_BASE_PATH=/your-repository-name/` before building. Do not publish the repository's source-root `index.html` directly: it is the Vite development entry and points at `src/main.jsx`; production hosting must serve the compiled `dist/` output.
 
@@ -174,3 +173,14 @@ MIT — see `LICENSE` (add one before open-sourcing).
 
 - Catalog, posters and metadata: [TMDB](https://www.themoviedb.org) (not endorsed/certified by TMDB).
 - Streaming embeds: third-party providers (see the legal note above).
+
+
+## Browser and third-party safety
+
+Brave Browser is recommended on desktop and mobile for compatibility, but it is optional. External providers may display advertising, redirects, or pop-ups. Never download or install an app, APK, extension, codec, player update, or file prompted by an external player. Read and accept the in-app Terms & Conditions before continuing. RoyverseMoviez does not host video files and does not control third-party playback services.
+
+## Credits
+
+A shoutout and thank-you to [TMDB](https://www.themoviedb.org) for movie and series metadata. This product uses the TMDB API but is not endorsed or certified by TMDB.
+
+With love, Ashutosh Roy.
