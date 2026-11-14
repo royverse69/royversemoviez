@@ -3,8 +3,8 @@ export const PROVIDERS = [
   {
     id: 'cinesrc',
     name: 'CineSrc (Primary)',
-    movie: (id) => `https://cinesrc.st/embed/movie/${encodeURIComponent(id)}?autoplay=true&controls=false&back=close&color=%23e50914&seek=10`,
-    tv: (id, season, episode) => `https://cinesrc.st/embed/tv/${encodeURIComponent(id)}?s=${season}&e=${episode}&autoplay=true&controls=false&back=close&autonext=false&color=%23e50914&seek=10`,
+    movie: (id) => `https://cinesrc.st/embed/movie/${encodeURIComponent(id)}?autoplay=true&back=close&color=%23e50914&seek=10`,
+    tv: (id, season, episode) => `https://cinesrc.st/embed/tv/${encodeURIComponent(id)}?s=${season}&e=${episode}&autoplay=true&back=close&autonext=false&color=%23e50914&seek=10`,
     origin: 'https://cinesrc.st',
   },
   {
