@@ -184,3 +184,19 @@ Brave Browser is recommended on desktop and mobile for compatibility, but it is 
 A shoutout and thank-you to [TMDB](https://www.themoviedb.org) for movie and series metadata. This product uses the TMDB API but is not endorsed or certified by TMDB.
 
 With love, Ashutosh Roy.
+
+
+## Deploy the Watch Party backend
+
+The frontend on GitHub Pages and the real-time Watch Party backend are separate deployments. The backend is a Cloudflare Worker with a Durable Object room coordinator.
+
+1. In Cloudflare, create an API token with the **Edit Cloudflare Workers** permission and copy the account ID.
+2. In GitHub, open **Settings → Secrets and variables → Actions** and add repository secrets named `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID`.
+3. Push a change under `server/` or manually run **Deploy RoyverseMoviez Watch Party Worker** from the Actions tab.
+4. Copy the `workers.dev` URL printed by Wrangler.
+5. Open RoyverseMoviez → **Settings → Watch Party Server**, paste that URL and use **Test connection**. The health check must confirm both the Worker and its `PARTY_ROOMS` Durable Object binding.
+6. Optionally add the same base URL as a GitHub Actions repository secret named `VITE_PARTY_WS_URL` so it is automatically embedded in future Pages builds for all visitors.
+
+The browser setting is stored per device; the Pages secret provides a shared default. The Worker exposes `/health` for diagnostics and `/party/{roomCode}` for WebSocket rooms.
+
+The Worker deployment cannot run until the Cloudflare account secrets above have been added. Never commit either secret to the repository or paste them into app settings.
