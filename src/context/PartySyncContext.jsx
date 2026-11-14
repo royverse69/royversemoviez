@@ -10,6 +10,9 @@ export function PartySyncProvider({ children }) {
   const joinParamsRef = useRef(null)
   const reconnectAttemptsRef = useRef(0)
   const reconnectTimerRef = useRef(null)
+  const connectionTimerRef = useRef(null)
+  const roomAckTimerRef = useRef(null)
+  const roomJoinedRef = useRef(false)
   const intentionalCloseRef = useRef(false)
   const inRoomRef = useRef(false)
 
@@ -42,6 +45,9 @@ export function PartySyncProvider({ children }) {
   const disconnect = useCallback(() => {
     intentionalCloseRef.current = true
     clearTimeout(reconnectTimerRef.current)
+    clearTimeout(connectionTimerRef.current)
+    clearTimeout(roomAckTimerRef.current)
+    roomJoinedRef.current = false
     const ws = wsRef.current
     if (ws) {
       if (ws.readyState === WebSocket.OPEN) {
@@ -70,14 +76,21 @@ export function PartySyncProvider({ children }) {
   }, [])
 
   const connect = useCallback((code, name, media) => {
-    const configuredUrl = import.meta.env.VITE_PARTY_WS_URL
+    joinParamsRef.current = { code, name, media }
+    setError(null)
+    setConnected(false)
+    setReconnecting(false)
+    roomJoinedRef.current = false
+
+    let savedWorkerUrl = ''
+    try { savedWorkerUrl = window.localStorage.getItem('royversemoviez.party-ws-url') || '' } catch {}
+    const configuredUrl = import.meta.env.VITE_PARTY_WS_URL || savedWorkerUrl
     const localDevelopmentUrl = import.meta.env.DEV ? 'ws://localhost:8787' : ''
     const rawUrl = configuredUrl || localDevelopmentUrl
 
     if (!rawUrl) {
-      setConnected(false)
-      setReconnecting(false)
-      setError('Watch Party is not configured for this deployment. Add the VITE_PARTY_WS_URL repository secret with your Cloudflare Worker URL, then redeploy.')
+      inRoomRef.current = false
+      setError('Watch Party server is not configured. Add your Cloudflare Worker URL in Settings → Watch Party Server, then retry.')
       return
     }
 
@@ -92,30 +105,54 @@ export function PartySyncProvider({ children }) {
       endpoint.hash = ''
       socketUrl = endpoint.toString()
     } catch (urlError) {
-      setConnected(false)
-      setReconnecting(false)
+      inRoomRef.current = false
       setError(`Invalid Watch Party server URL: ${urlError.message}`)
       return
     }
 
-    joinParamsRef.current = { code, name, media }
     intentionalCloseRef.current = false
     reconnectAttemptsRef.current = 0
+    inRoomRef.current = true
+    setReconnecting(true)
 
     const openSocket = () => {
-      const ws = new WebSocket(socketUrl)
+      clearTimeout(connectionTimerRef.current)
+      clearTimeout(roomAckTimerRef.current)
+      roomJoinedRef.current = false
+
+      let ws
+      try {
+        ws = new WebSocket(socketUrl)
+      } catch {
+        setConnected(false)
+        setReconnecting(false)
+        setError('Could not create a Watch Party connection. Check the Worker URL.')
+        inRoomRef.current = false
+        return
+      }
       wsRef.current = ws
 
+      connectionTimerRef.current = setTimeout(() => {
+        if (ws.readyState === WebSocket.CONNECTING) {
+          setError('Watch Party server did not respond. Retrying the connection...')
+          try { ws.close() } catch {}
+        }
+      }, 10000)
+
       ws.onopen = () => {
+        clearTimeout(connectionTimerRef.current)
         setConnected(true)
         setReconnecting(false)
         setRoomCode(code)
         setError(null)
-        inRoomRef.current = true
-        reconnectAttemptsRef.current = 0
-        if (ws.readyState === WebSocket.OPEN) {
-          ws.send(JSON.stringify({ type: 'join', roomCode: code, name, media }))
-        }
+        ws.send(JSON.stringify({ type: 'join', roomCode: code, name, media }))
+
+        roomAckTimerRef.current = setTimeout(() => {
+          if (!roomJoinedRef.current && ws.readyState === WebSocket.OPEN) {
+            setError('The server connected but did not confirm this room. Check that the latest Cloudflare Worker is deployed.')
+            try { ws.close() } catch {}
+          }
+        }, 10000)
       }
 
       ws.onmessage = (msg) => {
@@ -126,39 +163,42 @@ export function PartySyncProvider({ children }) {
       }
 
       ws.onerror = () => {
-        setError('Connection failed. Is the party server running?')
+        setError('Watch Party connection failed. Check the Cloudflare Worker URL and deployment.')
       }
 
       ws.onclose = () => {
+        clearTimeout(connectionTimerRef.current)
+        clearTimeout(roomAckTimerRef.current)
         setConnected(false)
         wsRef.current = null
         if (!intentionalCloseRef.current && inRoomRef.current) {
           if (reconnectAttemptsRef.current < MAX_RECONNECT_ATTEMPTS) {
             reconnectAttemptsRef.current += 1
             setReconnecting(true)
-            setError('Connection lost. Reconnecting...')
+            setError(`Connection lost. Retrying (${reconnectAttemptsRef.current}/${MAX_RECONNECT_ATTEMPTS})…`)
             reconnectTimerRef.current = setTimeout(() => {
-              if (!intentionalCloseRef.current && inRoomRef.current) {
-                openSocket()
-              }
-            }, 2000)
+              if (!intentionalCloseRef.current && inRoomRef.current) openSocket()
+            }, 1800)
           } else {
-            setError('Disconnected from party room')
-            setReconnecting(false)
             inRoomRef.current = false
             joinParamsRef.current = null
-            navigate('/party')
+            setReconnecting(false)
+            setError('Could not connect after several attempts. Verify the Worker URL and try again.')
           }
         }
       }
     }
 
     openSocket()
-  }, [navigate])
+  }, [])
+
 
   handleServerMessageRef.current = useCallback((data) => {
     switch (data.type) {
       case 'room:joined':
+        roomJoinedRef.current = true
+        clearTimeout(roomAckTimerRef.current)
+        setError(null)
         setRole(data.role)
         setParticipantId(data.participantId)
         setPartyMedia(data.media)
@@ -262,6 +302,15 @@ export function PartySyncProvider({ children }) {
     }
   }, [])
 
+  const retryConnection = useCallback(() => {
+    const params = joinParamsRef.current
+    if (!params) {
+      setError('No pending party room. Return to the Watch Party lobby and create or join a room again.')
+      return
+    }
+    connect(params.code, params.name, params.media)
+  }, [connect])
+
   const createRoom = useCallback((code, name, media) => {
     connect(code, name, { ...media, isCreator: true })
   }, [connect])
@@ -327,6 +376,7 @@ export function PartySyncProvider({ children }) {
     error,
     createRoom,
     joinRoom,
+    retryConnection,
     disconnect,
     sendPartyEvent,
     requestSync,
