@@ -19,7 +19,16 @@ export class PartyRoom {
     this.state.blockConcurrencyWhile(async () => {
       const stored = await this.state.storage.get('room')
       if (stored) {
-        this.room = stored
+        // A new Durable Object instance has no live WebSocket sessions. A
+        // persisted host ID from the previous isolate would otherwise make
+        // every reconnecting participant a member with no reachable host.
+        this.room = {
+          ...stored,
+          host: null,
+          participants: [],
+          shareActive: false,
+        }
+        await this.state.storage.put('room', this.room)
       }
     })
   }
@@ -311,17 +320,53 @@ export class PartyRoom {
   }
 }
 
+const json = (body, status = 200) => new Response(JSON.stringify(body), {
+  status,
+  headers: {
+    'content-type': 'application/json; charset=utf-8',
+    'cache-control': 'no-store',
+    'access-control-allow-origin': '*',
+    'access-control-allow-methods': 'GET, OPTIONS',
+    'access-control-allow-headers': 'content-type',
+  },
+})
+
 export default {
   async fetch(request, env) {
     const url = new URL(request.url)
-    const roomCode = url.pathname.match(/^\/party\/([A-Za-z0-9]+)$/)?.[1]?.toUpperCase()
 
+    if (request.method === 'OPTIONS') {
+      return new Response(null, {
+        status: 204,
+        headers: {
+          'access-control-allow-origin': '*',
+          'access-control-allow-methods': 'GET, OPTIONS',
+          'access-control-allow-headers': 'content-type',
+          'access-control-max-age': '86400',
+        },
+      })
+    }
+
+    if (url.pathname === '/health' && request.method === 'GET') {
+      return json({
+        ok: true,
+        service: 'royversemoviez-party',
+        durableObjectsConfigured: Boolean(env.PARTY_ROOMS),
+        timestamp: Date.now(),
+      })
+    }
+
+    const roomCode = url.pathname.match(/^\\/party\\/([A-Za-z0-9]+)$/)?.[1]?.toUpperCase()
     if (!roomCode) {
-      return new Response('Room code required in URL path: /party/:code', { status: 400 })
+      return json({ ok: false, error: 'Room code required in URL path: /party/:code' }, 400)
     }
 
     if (request.headers.get('Upgrade') !== 'websocket') {
-      return new Response('Expected WebSocket upgrade', { status: 426 })
+      return json({ ok: false, error: 'Expected WebSocket upgrade' }, 426)
+    }
+
+    if (!env.PARTY_ROOMS) {
+      return json({ ok: false, error: 'PARTY_ROOMS Durable Object binding is missing' }, 503)
     }
 
     const id = env.PARTY_ROOMS.idFromName(roomCode)
