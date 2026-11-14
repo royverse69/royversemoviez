@@ -47,9 +47,16 @@ self.addEventListener('fetch', (event) => {
   if (url.origin === self.location.origin) {
     if (request.mode === 'navigate') {
       event.respondWith(
-        fetch(request).then((response) => {
+        fetch(request).then(async (response) => {
+          if (response.status === 404) {
+            const cachedApp = await caches.match(APP_ENTRY)
+            if (cachedApp) return cachedApp
+            const appResponse = await fetch(APP_ENTRY)
+            if (appResponse.ok) return appResponse
+          }
           if (response.ok) {
-            caches.open(SHELL_CACHE).then((cache) => cache.put(APP_ENTRY, response.clone()))
+            const cache = await caches.open(SHELL_CACHE)
+            cache.put(APP_ENTRY, response.clone())
           }
           return response
         }).catch(async () => (await caches.match(APP_ENTRY)) || (await caches.match(APP_ROOT)))
