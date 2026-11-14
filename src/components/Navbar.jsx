@@ -22,7 +22,7 @@ export default function Navbar() {
   const { items } = useMyList()
   const { items: historyItems } = useHistory()
   const location = useLocation()
-  const immersive = location.pathname.startsWith('/watch/') || /^\\/party\\/[^/]+/.test(location.pathname)
+  const immersive = location.pathname.startsWith('/watch/') || /^\/party\/[^/]+/.test(location.pathname)
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 40)
