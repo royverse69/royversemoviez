@@ -661,7 +661,7 @@ function PlayerView({
 
       <div
         ref={containerRef}
-        className="group relative mx-auto w-full overflow-hidden bg-black shadow-2xl shadow-black/30"
+        className="watch-player-shell group relative mx-auto w-full overflow-hidden bg-black shadow-2xl shadow-black/30"
         style={{
           width: '100%',
           height: 'min(56.25vw, 76svh)',
