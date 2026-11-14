@@ -1,10 +1,10 @@
-// CineSrc is the primary player. The other providers are retained as backups.
+// CineSrc runs in control-less mode so the app can provide a consistent, responsive control bar.
 export const PROVIDERS = [
   {
     id: 'cinesrc',
     name: 'CineSrc (Primary)',
-    movie: (id) => `https://cinesrc.st/embed/movie/${encodeURIComponent(id)}?color=%23e50914`,
-    tv: (id, season, episode) => `https://cinesrc.st/embed/tv/${encodeURIComponent(id)}?s=${season}&e=${episode}&autonext=false&color=%23e50914`,
+    movie: (id) => `https://cinesrc.st/embed/movie/${encodeURIComponent(id)}?autoplay=true&controls=false&back=close&color=%23e50914&seek=10`,
+    tv: (id, season, episode) => `https://cinesrc.st/embed/tv/${encodeURIComponent(id)}?s=${season}&e=${episode}&autoplay=true&controls=false&back=close&autonext=false&color=%23e50914&seek=10`,
     origin: 'https://cinesrc.st',
   },
   {
