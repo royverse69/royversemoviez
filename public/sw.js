@@ -1,5 +1,5 @@
 const CACHE_PREFIX = 'royversemoviez'
-const SHELL_CACHE = `${CACHE_PREFIX}-shell-v1`
+const SHELL_CACHE = `${CACHE_PREFIX}-shell-v2`
 const TMDB_IMAGE_CACHE = `${CACHE_PREFIX}-tmdb-images-v1`
 const APP_SCOPE = self.registration.scope
 const APP_ENTRY = new URL('index.html', APP_SCOPE).href
