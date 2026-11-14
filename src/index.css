@@ -100,3 +100,29 @@ body {
   background-size: 700px 100%;
   animation: shimmer 1.4s infinite linear;
 }
+
+/* Small-screen and touch-device polish */
+html {
+  scroll-behavior: smooth;
+  -webkit-text-size-adjust: 100%;
+}
+body {
+  overscroll-behavior-y: contain;
+}
+button, a, select, input {
+  touch-action: manipulation;
+}
+button, a {
+  -webkit-tap-highlight-color: transparent;
+}
+.no-scrollbar {
+  scroll-padding-inline: 0.75rem;
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    scroll-behavior: auto !important;
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .01ms !important;
+  }
+}
