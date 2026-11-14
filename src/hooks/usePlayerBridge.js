@@ -1,21 +1,16 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
-// Time after iframe load with no player telemetry before we consider the
-// provider's postMessage API unavailable for this title.
-const NO_TELEMETRY_TIMEOUT_MS = 10_000
-const TELEMETRY_HINT_RE = /play|player|video|time|media/i
-const MAX_DEBUG_LOGS = 5
+const CINESRC_ORIGIN = 'https://cinesrc.st'
+const CINESRC_READY_TIMEOUT_MS = 22_000
+const BACKUP_TELEMETRY_TIMEOUT_MS = 10_000
 
-function parsePlayerMessage(data) {
+function parseLegacyMessage(data) {
   let payload = data
   if (typeof payload === 'string') {
     try { payload = JSON.parse(payload) } catch { return null }
   }
   if (!payload || typeof payload !== 'object') return null
 
-  // VidFast / VidCore envelope (verified against the provider's bundle):
-  //   { type: 'PLAYER_EVENT', data: { event, currentTime, duration, playing,
-  //                                    tmdbId, mediaType, season, episode, muted, volume } }
   if (payload.type === 'PLAYER_EVENT' && payload.data && typeof payload.data === 'object') {
     const d = payload.data
     const time = Number(d.currentTime)
@@ -26,17 +21,12 @@ function parsePlayerMessage(data) {
       paused: typeof d.playing === 'boolean' ? !d.playing : null,
     }
   }
-
-  // Provider activity beacons that carry no seekable position but prove the
-  // embed is alive: MEDIA_DATA (progress mirror, every 5s) and status codes.
   if (payload.type === 'MEDIA_DATA' && payload.data && typeof payload.data === 'object') {
     return { activityOnly: true, mediaData: payload.data }
   }
   if (payload.event === 'status') {
-    return payload.data === 404 ? { activityOnly: true, notFound: true } : { activityOnly: true }
+    return { activityOnly: true, notFound: payload.data === 404 }
   }
-
-  // Generic "player:timeupdate"-style envelope.
   const type = typeof payload.type === 'string' ? payload.type : ''
   if (!type.includes('timeupdate')) return null
   const time = Number(payload.time ?? payload.currentTime)
@@ -48,163 +38,199 @@ function parsePlayerMessage(data) {
   }
 }
 
-// Summarizes messages that look playback-related but don't match the known
-// protocol — logged (a few times per player load) so a real-device session can
-// reveal a provider's actual message envelope without spamming the console.
-function summarizeUnknownPlayerMessage(data) {
-  let payload = data
-  if (typeof payload === 'string') {
-    try { payload = JSON.parse(payload) } catch { return null }
-  }
-  if (!payload || typeof payload !== 'object') return null
-  const type = typeof payload.type === 'string' ? payload.type : ''
-  const hasTimeKeys =
-    Number.isFinite(Number(payload.time)) ||
-    Number.isFinite(Number(payload.currentTime)) ||
-    Number.isFinite(Number(payload.duration))
-  if (!type && !hasTimeKeys) return null
-  if (!hasTimeKeys && !TELEMETRY_HINT_RE.test(type)) return null
-  return { type: type || null, keys: Object.keys(payload).slice(0, 12) }
-}
-
-// Bridges the party/watch iframe with the VidFast-style postMessage player API:
-//   iframe -> parent : { type: 'player:timeupdate', time, duration, paused }
-//   parent -> iframe : { type: 'player:play' | 'player:pause' }
-//                     { type: 'player:seek', time, exact: true }
-// Exposes a subscribe/getState telemetry stream plus play/pause/seek commands.
 export function usePlayerBridge({ iframeRef, playerUrl, active = true }) {
   const [ready, setReady] = useState(false)
-  const [hasTelemetry, setHasTelemetry] = useState(true)
+  const [hasTelemetry, setHasTelemetry] = useState(false)
+  const [error, setError] = useState(null)
   const stateRef = useRef({ time: 0, duration: 0, paused: null, updatedAt: 0 })
   const lastMessageAtRef = useRef(0)
   const mediaDataRef = useRef(null)
   const listenersRef = useRef(new Set())
 
+  const playerOrigin = useMemo(() => {
+    try { return playerUrl ? new URL(playerUrl).origin : null } catch { return null }
+  }, [playerUrl])
+  const isCineSrc = playerOrigin === CINESRC_ORIGIN
+
   const subscribe = useCallback((fn) => {
     listenersRef.current.add(fn)
     return () => listenersRef.current.delete(fn)
   }, [])
-
   const getState = useCallback(() => ({ ...stateRef.current }), [])
-
   const getLastMessageAt = useCallback(() => lastMessageAtRef.current, [])
-
   const getMediaData = useCallback(() => mediaDataRef.current, [])
 
-  // Commands are sent in every recognized envelope — providers that don't
-  // support a given shape safely ignore it, and whether a command took effect
-  // is observable in the incoming telemetry stream.
-  const sendCommand = useCallback(
-    (commands) => {
-      const win = iframeRef.current?.contentWindow
-      if (!win) return
-      for (const command of commands) {
-        try { win.postMessage(command, '*') } catch {}
-      }
-    },
-    [iframeRef]
-  )
+  const sendCommand = useCallback((command, args = []) => {
+    const win = iframeRef.current?.contentWindow
+    if (!win || !playerOrigin) return
 
-  const play = useCallback(
-    () => sendCommand([{ type: 'player:play' }, { command: 'play' }]),
-    [sendCommand]
-  )
-  const pause = useCallback(
-    () => sendCommand([{ type: 'player:pause' }, { command: 'pause' }]),
-    [sendCommand]
-  )
-  const seek = useCallback(
-    (time) =>
-      sendCommand([
-        { type: 'player:seek', time, currentTime: time, exact: true },
-        { command: 'seek', time, exact: true },
-        { command: 'seek', value: time },
-      ]),
-    [sendCommand]
-  )
+    if (playerOrigin === CINESRC_ORIGIN) {
+      // CineSrc documents this command envelope and exact target origin.
+      try { win.postMessage({ type: 'cinesrc:command', command, args }, CINESRC_ORIGIN) } catch {}
+      return
+    }
+
+    // Keep the previous player bridge for explicitly selected backup providers.
+    const legacyCommands = {
+      play: [{ type: 'player:play' }, { command: 'play' }],
+      pause: [{ type: 'player:pause' }, { command: 'pause' }],
+      seek: [
+        { type: 'player:seek', time: Number(args[0]) || 0, currentTime: Number(args[0]) || 0, exact: true },
+        { command: 'seek', time: Number(args[0]) || 0, exact: true },
+        { command: 'seek', value: Number(args[0]) || 0 },
+      ],
+    }
+    for (const payload of legacyCommands[command] || []) {
+      try { win.postMessage(payload, playerOrigin) } catch {}
+    }
+  }, [iframeRef, playerOrigin])
+
+  const play = useCallback(() => sendCommand('play'), [sendCommand])
+  const pause = useCallback(() => sendCommand('pause'), [sendCommand])
+  const seek = useCallback((time) => sendCommand('seek', [Number(time) || 0]), [sendCommand])
 
   useEffect(() => {
-    if (!active || !playerUrl) return
+    if (!active || !playerUrl || !playerOrigin) return
     setReady(false)
-    setHasTelemetry(true)
+    setHasTelemetry(false)
+    setError(null)
     stateRef.current = { time: 0, duration: 0, paused: null, updatedAt: 0 }
+    lastMessageAtRef.current = 0
     mediaDataRef.current = null
 
-    let fallbackTimer = setTimeout(() => setHasTelemetry(false), NO_TELEMETRY_TIMEOUT_MS)
-    let debugCount = 0
-    let protocolConfirmed = false
+    const fallbackTimer = window.setTimeout(() => {
+      if (isCineSrc) {
+        setHasTelemetry(false)
+        setError('CineSrc did not become ready. Try the backup provider.')
+      } else {
+        setHasTelemetry(false)
+      }
+    }, isCineSrc ? CINESRC_READY_TIMEOUT_MS : BACKUP_TELEMETRY_TIMEOUT_MS)
+
+    const clearFallbackTimer = () => window.clearTimeout(fallbackTimer)
 
     const onMessage = (event) => {
       const iframe = iframeRef.current
-      if (!iframe || event.source !== iframe.contentWindow) return
-      const parsed = parsePlayerMessage(event.data)
-      if (!parsed) {
-        if (debugCount < MAX_DEBUG_LOGS) {
-          const summary = summarizeUnknownPlayerMessage(event.data)
-          if (summary) {
-            debugCount += 1
-            console.debug('[player-bridge] unrecognized player message', summary)
+      // Messages must come from this iframe and the origin it was loaded from.
+      if (!iframe || event.source !== iframe.contentWindow || event.origin !== playerOrigin) return
+
+      if (isCineSrc) {
+        const payload = event.data
+        if (!payload || typeof payload !== 'object' || typeof payload.type !== 'string') return
+        const now = Date.now()
+        const prev = stateRef.current
+
+        if (payload.type === 'cinesrc:error') {
+          clearFallbackTimer()
+          setError(typeof payload.error === 'string' ? payload.error : 'CineSrc reported a playback error.')
+          setHasTelemetry(false)
+          return
+        }
+
+        if (payload.type === 'cinesrc:ready' || payload.type === 'cinesrc:loadedmetadata') {
+          clearFallbackTimer()
+          setReady(true)
+          setHasTelemetry(true)
+          const next = {
+            ...prev,
+            duration: Number.isFinite(Number(payload.duration)) ? Number(payload.duration) : prev.duration,
+            updatedAt: now,
+          }
+          stateRef.current = next
+          lastMessageAtRef.current = now
+          return
+        }
+
+        if (payload.type === 'cinesrc:timeupdate' || payload.type === 'cinesrc:seeking' || payload.type === 'cinesrc:seeked') {
+          const time = Number(payload.currentTime)
+          const duration = Number(payload.duration)
+          if (!Number.isFinite(time) || time < 0) return
+          const next = {
+            time,
+            duration: Number.isFinite(duration) && duration > 0 ? duration : prev.duration,
+            paused: payload.type === 'cinesrc:timeupdate' ? false : prev.paused,
+            updatedAt: now,
+          }
+          stateRef.current = next
+          lastMessageAtRef.current = now
+          clearFallbackTimer()
+          setReady(true)
+          setHasTelemetry(true)
+          listenersRef.current.forEach((fn) => { try { fn(next) } catch {} })
+          return
+        }
+
+        if (payload.type === 'cinesrc:play' || payload.type === 'cinesrc:pause' || payload.type === 'cinesrc:ended') {
+          const next = { ...prev, paused: payload.type !== 'cinesrc:play', updatedAt: now }
+          stateRef.current = next
+          lastMessageAtRef.current = now
+          clearFallbackTimer()
+          setReady(true)
+          setHasTelemetry(true)
+          listenersRef.current.forEach((fn) => { try { fn(next) } catch {} })
+          return
+        }
+
+        if (payload.type === 'cinesrc:response') {
+          let next = null
+          if (payload.command === 'getCurrentTime' && Number.isFinite(Number(payload.result))) {
+            next = { ...prev, time: Number(payload.result), updatedAt: now }
+          } else if (payload.command === 'getDuration' && Number.isFinite(Number(payload.result))) {
+            next = { ...prev, duration: Number(payload.result), updatedAt: now }
+          } else if (payload.command === 'getPaused' && typeof payload.result === 'boolean') {
+            next = { ...prev, paused: payload.result, updatedAt: now }
+          }
+          if (next) {
+            stateRef.current = next
+            lastMessageAtRef.current = now
+            listenersRef.current.forEach((fn) => { try { fn(next) } catch {} })
           }
         }
         return
       }
+
+      const parsed = parseLegacyMessage(event.data)
+      if (!parsed) return
+      const now = Date.now()
       if (parsed.activityOnly) {
-        // Provider heartbeat (MEDIA_DATA / status): the embed is alive, reset
-        // the unavailability timer even before playback starts.
-        if (fallbackTimer) {
-          clearTimeout(fallbackTimer)
-          fallbackTimer = null
-        }
-        lastMessageAtRef.current = Date.now()
         if (parsed.mediaData) mediaDataRef.current = parsed.mediaData
+        lastMessageAtRef.current = now
         return
       }
-      if (!protocolConfirmed) {
-        protocolConfirmed = true
-        debugCount = MAX_DEBUG_LOGS
-        console.debug('[player-bridge] telemetry active')
-      }
 
-      const now = Date.now()
       const prev = stateRef.current
       let paused = parsed.paused
       if (paused === null) {
         if (prev.updatedAt) {
           const elapsed = (now - prev.updatedAt) / 1000
-          const advanced = parsed.time - prev.time
-          paused = elapsed >= 0 && advanced > 0.15
+          paused = parsed.time - prev.time <= Math.max(0.15, elapsed * 0.15)
         } else {
           paused = true
         }
       }
-
-      stateRef.current = {
+      const next = {
         time: parsed.time,
         duration: parsed.duration || prev.duration,
         paused,
         updatedAt: now,
       }
+      stateRef.current = next
       lastMessageAtRef.current = now
-      if (fallbackTimer) {
-        clearTimeout(fallbackTimer)
-        fallbackTimer = null
-      }
-      setHasTelemetry(true)
+      clearFallbackTimer()
       setReady(true)
-      listenersRef.current.forEach((fn) => {
-        try { fn(stateRef.current) } catch {}
-      })
+      setHasTelemetry(true)
+      listenersRef.current.forEach((fn) => { try { fn(next) } catch {} })
     }
 
     window.addEventListener('message', onMessage)
     return () => {
       window.removeEventListener('message', onMessage)
-      if (fallbackTimer) clearTimeout(fallbackTimer)
+      clearFallbackTimer()
     }
-  }, [active, playerUrl, iframeRef])
+  }, [active, playerUrl, playerOrigin, isCineSrc, iframeRef])
 
   return useMemo(
-    () => ({ ready, hasTelemetry, getState, getLastMessageAt, getMediaData, subscribe, play, pause, seek }),
-    [ready, hasTelemetry, getState, getLastMessageAt, getMediaData, subscribe, play, pause, seek]
+    () => ({ ready, hasTelemetry, error, getState, getLastMessageAt, getMediaData, subscribe, play, pause, seek }),
+    [ready, hasTelemetry, error, getState, getLastMessageAt, getMediaData, subscribe, play, pause, seek]
   )
 }
