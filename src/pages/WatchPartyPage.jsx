@@ -51,8 +51,7 @@ export default function WatchPartyPage() {
         </div>
 
         <p className="mt-6 text-xs text-mist/60">
-          Host-driven playback sync via the VidFast postMessage API. Parties expire when everyone
-          leaves.
+          Host-driven playback sync uses the active player’s messaging API. CineSrc is primary, with VidCore as an automatic backup if CineSrc fails. Parties expire when everyone leaves.
         </p>
       </div>
 
