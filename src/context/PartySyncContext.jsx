@@ -111,7 +111,7 @@ export function PartySyncProvider({ children }) {
       if (endpoint.protocol === 'https:') endpoint.protocol = 'wss:'
       if (endpoint.protocol === 'http:') endpoint.protocol = 'ws:'
       if (!['ws:', 'wss:'].includes(endpoint.protocol)) throw new Error('Use an https:// or wss:// Worker URL.')
-      endpoint.pathname = `${endpoint.pathname.replace(/[/]+$/, '')}/party/${encodeURIComponent(code)}`
+      endpoint.pathname = `/party/${encodeURIComponent(code)}`
       endpoint.search = ''
       endpoint.hash = ''
       socketUrl = endpoint.toString()
