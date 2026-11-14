@@ -12,7 +12,7 @@ export default function Footer() {
             <span className="text-xl font-black tracking-tight">RoyverseMoviez</span>
           </Link>
           <p className="mt-3 text-sm leading-relaxed text-mist">
-            Discover movies and series, explore new favourites, and keep your watchlist in one place.
+            Discover films and series, keep your favourites close, and enjoy a cleaner way to explore.
           </p>
         </div>
 
@@ -54,13 +54,13 @@ export default function Footer() {
             TMDB
           </a>
           <p className="mt-3 text-xs leading-relaxed text-mist/70">
-            This product uses the TMDB API but is not endorsed or certified by TMDB.
+            A shoutout and thank-you to TMDB for powering movie and series discovery. This product uses the TMDB API but is not endorsed or certified by TMDB.
           </p>
         </div>
       </div>
 
       <div className="border-t border-white/5 py-5 text-center text-xs text-mist/60">
-        © {new Date().getFullYear()} RoyverseMoviez · Made by AshutoshRoy
+        © {new Date().getFullYear()} RoyverseMoviez · With love, Ashutosh Roy
       </div>
     </footer>
   )
