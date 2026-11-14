@@ -34,6 +34,8 @@ jobs:
 
       - name: Build app
         run: npm run build
+        env:
+          VITE_PARTY_WS_URL: ${{ secrets.VITE_PARTY_WS_URL }}
 
       - name: Upload production build
         uses: actions/upload-pages-artifact@v3
