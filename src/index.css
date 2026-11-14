@@ -145,3 +145,27 @@ button, a {
     border-radius: 0;
   }
 }
+
+
+/* Native selects stay legible and inside their mobile containers */
+select {
+  color-scheme: dark;
+  color: #f5f5f5;
+  background-color: #141414;
+  border-color: rgba(255, 255, 255, .15);
+  min-width: 0;
+  max-width: 100%;
+  text-overflow: ellipsis;
+}
+select option {
+  color: #f5f5f5;
+  background: #141414;
+}
+input, textarea, select {
+  font-size: max(16px, 1em);
+}
+@media (max-width: 640px) {
+  select {
+    width: 100%;
+  }
+}
