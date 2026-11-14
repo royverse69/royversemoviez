@@ -132,6 +132,7 @@ export default function WatchPage() {
         episodes={episodes || []}
         episodesLoading={episodesLoading}
         trailerUrl={trailerUrl}
+        related={related || []}
         mode={playbackMode}
         providerId={providerId}
         setProvider={setProvider}
@@ -510,6 +511,7 @@ function PlayerView({
   episodes,
   episodesLoading,
   trailerUrl,
+  related,
   mode,
   providerId,
   setProvider,
@@ -519,23 +521,19 @@ function PlayerView({
   onClose,
 }) {
   const containerRef = useRef(null)
-
-  const nextEpisode = episodes.find((e) => e.number === episode + 1)
-  const hasNext = Boolean(nextEpisode)
-
-  // Playback position tracking + resume via the provider's postMessage API.
   const playerIframeRef = useRef(null)
+  const nextEpisode = episodes.find((item) => item.number === episode + 1)
   const { items: historyItems, updatePosition } = useHistory()
   const latestHistoryRef = useRef(historyItems)
   latestHistoryRef.current = historyItems
   const lastWrittenRef = useRef(null)
   const resumedForRef = useRef(null)
+  const fallbackAttemptedRef = useRef(new Set())
   const [resumeNotice, setResumeNotice] = useState(null)
   const [fallbackMessage, setFallbackMessage] = useState('')
-  const fallbackAttemptedRef = useRef(new Set())
 
   const contentPlayerUrl = useMemo(
-    () => (mode === 'content' ? buildEmbedUrl(providerId, mediaType, id, season, episode) : null),
+    () => mode === 'content' ? buildEmbedUrl(providerId, mediaType, id, season, episode) : null,
     [mode, providerId, mediaType, id, season, episode]
   )
   const bridge = usePlayerBridge({
@@ -548,20 +546,19 @@ function PlayerView({
     if (mode !== 'content' || providerId !== 'cinesrc' || !bridge.error) return
     if (fallbackAttemptedRef.current.has(contentPlayerUrl)) return
     fallbackAttemptedRef.current.add(contentPlayerUrl)
-    setFallbackMessage('CineSrc could not start this title. Switched to the VidCore backup. You can choose another backup in the player menu.')
+    setFallbackMessage('CineSrc could not start this title. The player has switched to VidCore.')
     setProvider('vidcore')
   }, [mode, providerId, bridge.error, contentPlayerUrl, setProvider])
 
-  // Resume where the user left off once the player reports telemetry.
   useEffect(() => {
     if (mode !== 'content' || !bridge.ready || !contentPlayerUrl) return
     if (resumedForRef.current === contentPlayerUrl) return
     resumedForRef.current = contentPlayerUrl
     setResumeNotice(null)
-    const sa = mediaType === 'tv' ? season : null
-    const ep = mediaType === 'tv' ? episode : null
+    const seasonNumber = mediaType === 'tv' ? season : null
+    const episodeNumber = mediaType === 'tv' ? episode : null
     const entry = latestHistoryRef.current.find(
-      (m) => m.key === media.key && m.season === sa && m.episode === ep
+      (item) => item.key === media.key && item.season === seasonNumber && item.episode === episodeNumber
     )
     const position = entry?.positionSeconds || 0
     const duration = entry?.durationSeconds || 0
@@ -570,54 +567,42 @@ function PlayerView({
     bridge.seek(target)
     bridge.play()
     setResumeNotice(target)
-    const timer = setTimeout(() => setResumeNotice(null), 6000)
-    return () => clearTimeout(timer)
-  }, [mode, bridge, bridge.ready, contentPlayerUrl, media.key, mediaType, season, episode])
+    const timer = window.setTimeout(() => setResumeNotice(null), 6000)
+    return () => window.clearTimeout(timer)
+  }, [mode, bridge.ready, contentPlayerUrl, media.key, mediaType, season, episode, bridge.seek, bridge.play])
 
-  // Save the current position periodically and once on leave.
   useEffect(() => {
     if (mode !== 'content') return
-    const sa = mediaType === 'tv' ? season : null
-    const ep = mediaType === 'tv' ? episode : null
-    const write = (force = false) => {
-      const s = bridge.getState()
-      if (s.updatedAt && s.time >= 5) {
-        if (!force && lastWrittenRef.current != null && Math.abs(s.time - lastWrittenRef.current) < 4) return
-        lastWrittenRef.current = s.time
-        updatePosition(media.key, s.time, s.duration, sa, ep)
-        return
-      }
-      // No live telemetry: mirror the provider's own progress store, which it
-      // broadcasts as MEDIA_DATA every few seconds (progress:m{tmdbId} keys for
-      // movies, progress:t{id} + show_progress.sNeN for series).
-      const store = bridge.getMediaData?.()
-      const mine = store?.[`${mediaType === 'tv' ? 't' : 'm'}${id}`]
-      const progress =
-        (mediaType === 'tv'
-          ? mine?.show_progress?.[`s${season}e${episode}`]?.progress
-          : null) ?? mine?.progress
-      const watched = Number(progress?.watched)
-      if (!Number.isFinite(watched) || watched < 5) return
-      if (lastWrittenRef.current != null && Math.abs(watched - lastWrittenRef.current) < 10) return
-      lastWrittenRef.current = watched
-      updatePosition(media.key, watched, Number(progress.duration) || 0, sa, ep)
+    const seasonNumber = mediaType === 'tv' ? season : null
+    const episodeNumber = mediaType === 'tv' ? episode : null
+    const write = () => {
+      const state = bridge.getState()
+      if (!state.updatedAt || state.time < 5) return
+      if (lastWrittenRef.current != null && Math.abs(state.time - lastWrittenRef.current) < 4) return
+      lastWrittenRef.current = state.time
+      updatePosition(media.key, state.time, state.duration, seasonNumber, episodeNumber)
     }
-    const timer = setInterval(() => write(), 5000)
+    const timer = window.setInterval(write, 5000)
     return () => {
-      clearInterval(timer)
-      write(true)
+      window.clearInterval(timer)
+      write()
     }
-  }, [mode, bridge, media.key, mediaType, id, season, episode, updatePosition])
+  }, [mode, bridge.getState, media.key, mediaType, season, episode, updatePosition])
 
   useEffect(() => {
-    const onKey = (e) => {
-      if (e.key === 'Escape') {
-        if (document.fullscreenElement) {
-          document.exitFullscreen()
-        } else {
-          onClose()
-        }
-      } else if (e.key === 'f' || e.key === 'F') {
+    if (providerId === 'cinesrc' && bridge.ready) bridge.refresh()
+  }, [providerId, bridge.ready, bridge.refresh])
+
+  useEffect(() => {
+    if (bridge.closed) onClose()
+  }, [bridge.closed, onClose])
+
+  useEffect(() => {
+    const onKey = (event) => {
+      if (event.key === 'Escape') {
+        if (document.fullscreenElement) document.exitFullscreen?.()
+        else onClose()
+      } else if (event.key.toLowerCase() === 'f' && !event.altKey && !event.ctrlKey && !event.metaKey) {
         toggleFullscreen()
       }
     }
@@ -626,145 +611,151 @@ function PlayerView({
   }, [onClose])
 
   const toggleFullscreen = () => {
-    const el = containerRef.current
-    if (!el) return
-    if (document.fullscreenElement) {
-      document.exitFullscreen()
-    } else {
-      el.requestFullscreen?.()
-    }
+    const element = containerRef.current
+    if (!element) return
+    if (document.fullscreenElement) document.exitFullscreen?.()
+    else element.requestFullscreen?.()
   }
 
+  const runtimeLabel = formatDuration(media?.runtime)
+  const metaItems = [
+    media?.year,
+    runtimeLabel,
+    media?.rating > 0 ? `★ ${media.rating.toFixed(1)}` : null,
+    mediaType === 'tv' ? 'TV Series' : 'Movie',
+  ].filter(Boolean)
+
   return (
-    <div className="min-h-screen bg-ink pt-16">
-      <div className="flex min-h-14 flex-wrap items-center justify-between gap-2 border-b border-white/10 bg-ink px-3 py-2 sm:min-h-16 sm:px-6 lg:px-10">
-        <button onClick={onClose} className="inline-flex items-center gap-1 text-sm font-bold text-cream/80 hover:text-white">
-          <ChevronLeftIcon className="h-5 w-5" /> Back to details
+    <div className="min-h-[calc(100dvh-4rem)] bg-ink pt-16">
+      <div className="grid w-full grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 border-b border-white/10 bg-ink px-3 py-2 sm:px-6 lg:px-10">
+        <button onClick={onClose} className="inline-flex min-h-10 shrink-0 items-center gap-1 text-xs font-bold text-cream/80 transition hover:text-white sm:text-sm">
+          <ChevronLeftIcon className="h-5 w-5" />
+          <span className="sm:hidden">Back</span>
+          <span className="hidden sm:inline">Back to details</span>
         </button>
-        <p className="min-w-0 flex-1 truncate px-2 text-[10px] font-bold uppercase tracking-wider text-mist sm:text-xs">
+        <p className="min-w-0 truncate px-1 text-center text-[10px] font-bold uppercase tracking-wider text-mist sm:text-xs">
           {mode === 'trailer' ? `${media.title} trailer` : mediaType === 'tv' ? `${media.title} · S${season} E${episode}` : media.title}
         </p>
-        <div className="flex items-center gap-2">
+        <div className="flex min-w-0 shrink-0 items-center gap-1.5 sm:gap-2">
           {mode === 'content' && (
             <select
               value={providerId}
               onChange={(event) => { setFallbackMessage(''); setProvider(event.target.value) }}
-              className="max-w-[44vw] rounded-lg border border-white/15 bg-surface px-2 py-2 text-xs font-bold text-white outline-none sm:max-w-none sm:px-3"
+              className="w-[min(38vw,170px)] min-w-0 rounded-lg border border-white/15 bg-surface px-2 py-2.5 text-[10px] font-bold text-white outline-none sm:w-auto sm:px-3 sm:text-xs"
+              aria-label="Streaming provider"
             >
               {PROVIDERS.map((provider) => <option key={provider.id} value={provider.id}>{provider.name}</option>)}
             </select>
           )}
-          <button
-            onClick={toggleFullscreen}
-            className="rounded-lg border border-white/15 bg-surface p-2 text-white transition hover:bg-white/10"
-            aria-label="Toggle fullscreen"
-            title="Fullscreen (F)"
-          >
+          <button onClick={toggleFullscreen} className="grid h-10 w-10 shrink-0 place-items-center rounded-lg border border-white/15 bg-surface text-white transition hover:bg-white/10" aria-label="Toggle fullscreen" title="Fullscreen (F)">
             <FullscreenIcon className="h-4 w-4" />
           </button>
         </div>
       </div>
+
       {fallbackMessage && (
         <div className="border-b border-amber-400/20 bg-amber-400/10 px-4 py-2 text-xs font-semibold text-amber-100" role="status">
           {fallbackMessage}
         </div>
       )}
-            <div ref={containerRef} className="relative mx-auto aspect-video w-full max-w-screen-2xl bg-black">
+
+      <div
+        ref={containerRef}
+        className="group relative mx-auto w-full overflow-hidden bg-black shadow-2xl shadow-black/30"
+        style={{
+          width: '100%',
+          height: 'min(56.25vw, 76svh)',
+          maxWidth: 'min(100%, calc(76svh * 1.77778))',
+          aspectRatio: '16 / 9',
+        }}
+      >
         {resumeNotice != null && (
-          <div className="pointer-events-none absolute left-3 top-3 z-10 rounded-full bg-black/70 px-3 py-1.5 text-[10px] font-black uppercase tracking-wider text-white backdrop-blur">
+          <div className="pointer-events-none absolute left-3 top-3 z-30 rounded-full bg-black/70 px-3 py-1.5 text-[10px] font-black uppercase tracking-wider text-white backdrop-blur">
             Resumed from {formatClock(resumeNotice)}
           </div>
         )}
+
         {mode === 'trailer' && trailerUrl ? (
           <iframe
             src={trailerUrl}
             title={`${media.title} trailer`}
-            className="h-full w-full border-0"
-            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+            className="absolute inset-0 h-full w-full border-0"
+            allow="autoplay; fullscreen; picture-in-picture"
             allowFullScreen
+            sandbox="allow-scripts allow-same-origin allow-presentation"
+            referrerPolicy="strict-origin"
           />
         ) : (
           <PlayerEmbed mediaType={mediaType} id={id} season={season} episode={episode} title={media.title} iframeRef={playerIframeRef} />
         )}
+
+        {mode === 'content' && providerId === 'cinesrc' && bridge.ready && (
+          <PlayerControls bridge={bridge} onFullscreen={toggleFullscreen} />
+        )}
       </div>
 
-      <div className="mx-auto w-full max-w-screen-2xl px-4 py-7 sm:px-6 lg:px-10">
-        <div className="flex flex-wrap items-start justify-between gap-4">
+      <div className="mx-auto w-full max-w-screen-2xl px-4 py-5 sm:px-6 sm:py-7 lg:px-10">
+        <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="min-w-0">
             <p className="text-[10px] font-black uppercase tracking-[0.2em] text-brand">
               {mode === 'trailer' ? 'Trailer' : mediaType === 'tv' ? `Season ${season} · Episode ${episode}` : 'Now Playing'}
             </p>
-            <h1 className="mt-1.5 text-2xl font-black tracking-tight text-white sm:text-3xl">
-              {media.title}
-            </h1>
+            <h1 className="mt-1 text-2xl font-black tracking-tight text-white sm:text-3xl">{media.title}</h1>
+            <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs font-semibold text-cream/65">
+              {metaItems.map((item) => <span key={item}>{item}</span>)}
+              {media?.genres?.length > 0 && <span>{media.genres.slice(0, 3).join(' · ')}</span>}
+            </div>
           </div>
-          {mode === 'content' && mediaType === 'tv' && hasNext && (
-            <button
-              onClick={() => onPlayEpisode(nextEpisode.number)}
-              className="inline-flex items-center gap-2 rounded-full bg-white px-5 py-2.5 text-sm font-black text-black transition hover:bg-cream"
-            >
-              Next Episode
-              <NextIcon className="h-4 w-4" />
+          {mode === 'content' && mediaType === 'tv' && nextEpisode && (
+            <button onClick={() => onPlayEpisode(nextEpisode.number)} className="inline-flex min-h-10 items-center gap-2 rounded-full bg-white px-4 py-2 text-xs font-black text-black transition hover:bg-cream sm:px-5 sm:text-sm">
+              Next Episode <NextIcon className="h-4 w-4" />
             </button>
           )}
         </div>
 
+        {media.overview && (
+          <p className="mt-4 max-w-4xl text-sm leading-6 text-cream/70 line-clamp-3 sm:line-clamp-4">
+            {media.overview}
+          </p>
+        )}
+
+        {related?.length > 0 && (
+          <section className="mt-7 border-t border-white/10 pt-6">
+            <RailHeading title="More Like This" count={`${related.length} titles`} />
+            <div className="no-scrollbar flex gap-3 overflow-x-auto overscroll-x-contain pb-4">
+              {related.map((item) => <MovieCard key={item.key} media={item} />)}
+            </div>
+          </section>
+        )}
+
         {mediaType === 'tv' && mode === 'content' && (
           <section className="mt-7 border-t border-white/10 pt-6">
-            <div className="mb-4 flex items-center justify-between gap-4">
+            <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
               <div>
                 <h2 className="text-lg font-black text-white">Episodes</h2>
-                <p className="mt-1 text-xs text-mist">Select an episode to continue watching</p>
+                <p className="mt-1 text-xs text-mist">Choose an episode</p>
               </div>
               <select
                 value={season}
                 onChange={(event) => onSeasonChange(Number(event.target.value))}
-                className="cursor-pointer rounded-lg border border-white/15 bg-surface px-3 py-2.5 text-xs font-bold text-white outline-none transition focus:border-brand"
+                className="min-h-11 rounded-lg border border-white/15 bg-surface px-3 py-2.5 text-xs font-bold text-white outline-none"
                 aria-label="Select season"
               >
-                {seasons.map((item) => (
-                  <option key={item.season_number} value={item.season_number}>
-                    Season {item.season_number}
-                  </option>
-                ))}
+                {seasons.map((item) => <option key={item.season_number} value={item.season_number}>Season {item.season_number}</option>)}
               </select>
             </div>
-
             {episodesLoading ? (
-              <div className="flex items-center gap-2 py-8 text-xs text-mist">
-                <SpinnerIcon className="h-4 w-4 text-brand" /> Loading episodes...
-              </div>
+              <div className="py-8 text-xs text-mist">Loading episodes...</div>
             ) : episodes.length ? (
-              <div className="no-scrollbar flex snap-x snap-mandatory gap-3 overflow-x-auto overscroll-x-contain px-2 pb-5 pt-2 scroll-smooth">
+              <div className="no-scrollbar flex snap-x snap-mandatory gap-3 overflow-x-auto overscroll-x-contain px-1 pb-5 pt-2">
                 {episodes.map((item) => {
                   const selected = item.number === episode
                   return (
-                    <button
-                      key={item.id || item.number}
-                      onClick={() => onEpisodeChange(item.number)}
-                      className="group w-[min(68vw,15rem)] shrink-0 snap-start snap-always text-left sm:w-56 lg:w-60 last:mr-2"
-                      aria-label={`Play episode ${item.number}: ${item.title}`}
-                    >
-                      <div className={`relative aspect-video overflow-hidden rounded-xl bg-surface-light ring-2 ring-inset transition ${selected ? 'ring-brand' : 'ring-white/10 group-hover:ring-white/30'}`}>
-                        {item.still ? (
-                          <img
-                            src={stillUrl(item.still, 'w500')}
-                            alt=""
-                            className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
-                            loading="lazy"
-                          />
-                        ) : (
-                          <div className="flex h-full items-center justify-center text-sm font-black text-mist">Episode {item.number}</div>
-                        )}
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-transparent to-transparent" />
-                        <span className="absolute bottom-2.5 left-3 flex h-7 w-7 items-center justify-center rounded-full border border-white/30 bg-black/60">
-                          <PlayIcon className="h-3 w-3 text-white" />
-                        </span>
-                        {selected && (
-                          <span className="absolute right-2.5 top-2.5 rounded bg-brand px-2 py-1 text-[9px] font-black uppercase tracking-wider text-white">
-                            Playing
-                          </span>
-                        )}
+                    <button key={item.id || item.number} onClick={() => onEpisodeChange(item.number)} className="group w-[min(72vw,15rem)] shrink-0 snap-start text-left sm:w-56 lg:w-60" aria-label={`Play episode ${item.number}: ${item.title}`}>
+                      <div className={`relative aspect-video overflow-hidden rounded-xl bg-surface-light ring-2 ring-inset ${selected ? 'ring-brand' : 'ring-white/10'}`}>
+                        {item.still ? <img src={stillUrl(item.still, 'w500')} alt="" className="h-full w-full object-cover" loading="lazy" /> : <div className="flex h-full items-center justify-center text-sm font-black text-mist">Episode {item.number}</div>}
+                        <span className="absolute bottom-2.5 left-3 flex h-7 w-7 items-center justify-center rounded-full border border-white/30 bg-black/60"><PlayIcon className="h-3 w-3 text-white" /></span>
+                        {selected && <span className="absolute right-2.5 top-2.5 rounded bg-brand px-2 py-1 text-[9px] font-black uppercase tracking-wider text-white">Playing</span>}
                       </div>
                       <div className="min-h-12 pt-2.5">
                         <p className="text-[10px] font-black uppercase tracking-wider text-mist">Episode {item.number}</p>
@@ -774,11 +765,70 @@ function PlayerView({
                   )
                 })}
               </div>
-            ) : (
-              <p className="py-8 text-xs text-mist">No episodes are available for this season.</p>
-            )}
+            ) : <p className="py-8 text-xs text-mist">No episodes are available for this season.</p>}
           </section>
         )}
+      </div>
+    </div>
+  )
+}
+
+function PlayerControls({ bridge, onFullscreen }) {
+  const [state, setState] = useState(() => bridge.getState())
+
+  useEffect(() => {
+    setState(bridge.getState())
+    return bridge.subscribe((next) => setState({ ...next }))
+  }, [bridge.getState, bridge.subscribe])
+
+  const duration = Math.max(0, Number(state.duration) || 0)
+  const currentTime = Math.min(duration || Number(state.time) || 0, Math.max(0, Number(state.time) || 0))
+  const volume = Math.min(1, Math.max(0, Number(state.volume) || 0))
+  const paused = state.paused !== false
+
+  return (
+    <div className="absolute inset-x-0 bottom-0 z-20 bg-gradient-to-t from-black via-black/85 to-transparent px-3 pb-3 pt-12 opacity-100 transition-opacity duration-200 lg:opacity-0 lg:group-hover:opacity-100 lg:group-focus-within:opacity-100">
+      <input
+        type="range"
+        min="0"
+        max={Math.max(duration, 1)}
+        step="1"
+        value={Math.min(currentTime, Math.max(duration, 1))}
+        onChange={(event) => bridge.seek(Number(event.target.value))}
+        aria-label="Seek"
+        className="mb-2 block h-1.5 w-full cursor-pointer accent-brand"
+      />
+      <div className="flex items-center justify-between gap-2 text-white">
+        <div className="flex min-w-0 items-center gap-1.5 sm:gap-2">
+          <button onClick={() => paused ? bridge.play() : bridge.pause()} className="grid h-8 w-8 shrink-0 place-items-center rounded-full hover:bg-white/15" aria-label={paused ? 'Play' : 'Pause'}>
+            <span className="text-base leading-none">{paused ? '▶' : 'Ⅱ'}</span>
+          </button>
+          <button onClick={() => bridge.seek(Math.max(0, currentTime - 10))} className="hidden h-8 shrink-0 rounded px-1 text-[10px] font-bold hover:bg-white/15 sm:block" aria-label="Back 10 seconds">−10</button>
+          <button onClick={() => bridge.seek(Math.min(duration || currentTime + 10, currentTime + 10))} className="hidden h-8 shrink-0 rounded px-1 text-[10px] font-bold hover:bg-white/15 sm:block" aria-label="Forward 10 seconds">+10</button>
+          <span className="whitespace-nowrap text-[10px] font-semibold tabular-nums sm:text-xs">{formatClock(currentTime)} / {formatClock(duration)}</span>
+        </div>
+        <div className="flex shrink-0 items-center gap-1 sm:gap-2">
+          <button onClick={() => bridge.setMuted(!state.muted)} className="grid h-8 w-8 place-items-center rounded-full text-sm hover:bg-white/15" aria-label={state.muted ? 'Unmute' : 'Mute'} title={state.muted ? 'Unmute' : 'Mute'}>
+            {state.muted || volume === 0 ? '🔇' : '🔊'}
+          </button>
+          <input
+            type="range"
+            min="0"
+            max="1"
+            step="0.05"
+            value={state.muted ? 0 : volume}
+            onChange={(event) => bridge.setVolume(Number(event.target.value))}
+            aria-label="Volume"
+            className="hidden h-1 w-16 cursor-pointer accent-brand sm:block"
+          />
+          <select value={Number(state.playbackRate) || 1} onChange={(event) => bridge.setPlaybackRate(Number(event.target.value))}
+            className="h-8 rounded bg-black/55 px-1.5 text-[10px] font-bold text-white outline-none sm:text-xs" aria-label="Playback speed">
+            {[0.75, 1, 1.25, 1.5, 1.75, 2].map((rate) => <option key={rate} value={rate}>{rate}×</option>)}
+          </select>
+          <button onClick={onFullscreen} className="grid h-8 w-8 place-items-center rounded-full hover:bg-white/15" aria-label="Fullscreen" title="Fullscreen">
+            <FullscreenIcon className="h-4 w-4" />
+          </button>
+        </div>
       </div>
     </div>
   )
