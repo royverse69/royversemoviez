@@ -182,7 +182,7 @@ function PartyRoomContent() {
     }
   }, [partyProvider, playback.bridge.error])
 
-  if (!connected && !reconnecting && !partyMedia) {
+  if (!connected && !partyMedia) {
     return (
       <div className="flex min-h-[100dvh] flex-col items-center justify-center bg-ink px-5 py-10 text-center">
         <div className="mb-5 flex h-16 w-16 items-center justify-center rounded-2xl border border-white/10 bg-white/5">
@@ -191,7 +191,7 @@ function PartyRoomContent() {
             : <div className="h-7 w-7 animate-spin rounded-full border-2 border-white/15 border-t-brand" />
           }
         </div>
-        <h1 className="text-xl font-black text-white">{error ? 'Could not connect to Watch Party' : 'Connecting to Watch Party'}</h1>
+        <h1 className="text-xl font-black text-white">{error ? 'Could not connect to Watch Party' : reconnecting ? 'Reconnecting to Watch Party' : 'Connecting to Watch Party'}</h1>
         <p className="mt-2 max-w-md text-sm leading-6 text-mist">{error || 'Waiting for the party server to respond…'}</p>
         <div className="mt-6 flex w-full max-w-sm gap-3">
           {error && (
@@ -199,7 +199,10 @@ function PartyRoomContent() {
               Retry connection
             </button>
           )}
-          <button onClick={handleLeave} className="min-h-11 flex-1 rounded-full border border-white/20 px-5 text-sm font-bold text-white transition hover:bg-white/10">
+          <button onClick={() => navigate('/settings')} className="min-h-11 flex-1 rounded-full border border-white/20 px-4 text-xs font-bold text-white transition hover:bg-white/10">
+            Settings
+          </button>
+          <button onClick={handleLeave} className="min-h-11 flex-1 rounded-full border border-white/20 px-4 text-xs font-bold text-white transition hover:bg-white/10">
             Back to party
           </button>
         </div>
