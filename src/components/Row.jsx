@@ -37,11 +37,11 @@ export default function Row({
 
   return (
     <section
-      className="relative -mx-1 px-4 sm:px-6 lg:px-10"
+      className="relative -mx-1 px-3 sm:px-6 lg:px-10"
       onMouseEnter={() => setShowButtons(true)}
       onMouseLeave={() => setShowButtons(false)}
     >
-      <h2 className="mb-3 pl-1 text-lg font-bold text-cream sm:text-xl">{title}</h2>
+      <h2 className="mb-2.5 pl-1 text-base font-black text-white sm:mb-3 sm:text-xl">{title}</h2>
 
       <div className="relative">
         {/* Arrows */}
@@ -66,7 +66,7 @@ export default function Row({
 
         <div
           ref={railRef}
-          className="no-scrollbar flex gap-3 overflow-x-auto scroll-smooth py-5"
+          className="no-scrollbar flex snap-x snap-mandatory gap-2.5 overflow-x-auto scroll-smooth py-4 sm:gap-3 sm:py-5"
         >
           {loading
             ? Array.from({ length: 8 }).map((_, i) => <CardSkeleton key={i} />)
@@ -110,5 +110,5 @@ function LoadMoreRetry({ onRetry }) {
 }
 
 function CardSkeleton() {
-  return <div className="skeleton aspect-[2/3] w-[230px] shrink-0 rounded-lg" />
+  return <div className="skeleton aspect-[2/3] w-[clamp(112px,28vw,184px)] shrink-0 rounded-xl sm:w-[clamp(150px,22vw,250px)]" />
 }
