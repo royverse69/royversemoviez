@@ -6,7 +6,7 @@ export default function PeoplePanel({ participants, hostId, participantId, voice
           {participants.length} participant{participants.length === 1 ? '' : 's'}
         </p>
         {participants.map((p) => (
-          <div key={p.id} className="flex items-center gap-2 rounded-lg bg-white/4 px-3 py-2">
+          <div key={p.id} className="flex min-h-11 items-center gap-2 rounded-lg bg-white/4 px-3 py-2">
             <div className="flex h-7 w-7 items-center justify-center rounded-full bg-surface-light text-xs font-black text-white">
               {p.id === hostId ? '👑' : p.name[0]?.toUpperCase() || '?'}
             </div>
@@ -29,10 +29,10 @@ export default function PeoplePanel({ participants, hostId, participantId, voice
           </div>
         ))}
       </div>
-      <div className="border-t border-white/10 p-4">
+      <div className="border-t border-white/10 p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:p-4">
         <button
           onClick={onLeave}
-          className="w-full rounded-lg border border-red-500/30 bg-red-500/10 py-2.5 text-xs font-black uppercase tracking-wider text-red-400 transition-colors hover:bg-red-500/20"
+          className="min-h-11 w-full rounded-lg border border-red-500/30 bg-red-500/10 py-2.5 text-xs font-black uppercase tracking-wider text-red-400 transition-colors hover:bg-red-500/20"
         >
           Leave Party
         </button>
