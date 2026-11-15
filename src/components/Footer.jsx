@@ -59,8 +59,13 @@ export default function Footer() {
           <p className="mt-3 text-[11px] leading-relaxed text-mist/65">
             TVmaze may be used for series-search fallback and is credited under its CC BY-SA licence. Availability data is provided through TMDB in partnership with JustWatch. Optional IMDb-derived fields are supplied by OMDb.
           </p>
+          <p className="mt-2 text-[10px] leading-relaxed text-mist/65">
+            Optional search fallbacks include Trakt and StreamX; fallback results are mapped back to TMDB IDs before they can open in the player. StreamX is an independent community project, not a streaming host.
+          </p>
           <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-[10px] font-semibold text-mist/70">
             <a href="https://www.tvmaze.com/" target="_blank" rel="noreferrer" className="hover:text-white">TVmaze ↗</a>
+            <a href="https://www.trakt.tv/" target="_blank" rel="noreferrer" className="hover:text-white">Trakt ↗</a>
+            <a href="https://github.com/imzyrix/streamx-api" target="_blank" rel="noreferrer" className="hover:text-white">StreamX API ↗</a>
             <a href="https://www.justwatch.com/" target="_blank" rel="noreferrer" className="hover:text-white">JustWatch ↗</a>
             <a href="https://www.omdbapi.com/" target="_blank" rel="noreferrer" className="hover:text-white">OMDb ↗</a>
           </div>
