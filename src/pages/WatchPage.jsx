@@ -170,14 +170,14 @@ export default function WatchPage() {
   }
 
   return (
-    <div className="relative min-h-screen overflow-x-hidden bg-ink pb-4 pt-16">
+    <div className="mobile-watch-detail-page relative min-h-screen overflow-x-hidden bg-ink pb-4 pt-16">
       <BackgroundGallery
         media={media}
         backdropPaths={backdropPaths || []}
       />
 
       <div className="relative z-10 w-full px-4 sm:px-6 lg:px-10">
-        <div className="relative flex min-h-[62vh] items-end pb-8 pt-16">
+        <div className="mobile-detail-hero relative flex min-h-[62vh] items-end pb-8 pt-16">
           <section className="max-w-2xl pb-2">
             <Link
               to={mediaType === 'tv' ? '/series' : '/movies'}
@@ -257,6 +257,16 @@ export default function WatchPage() {
             )}
 
             <div className="mt-7 flex flex-wrap items-center gap-3">
+              <button
+                onClick={() => {
+                  setProvider('moviebox-tui')
+                  setPlaybackMode('content')
+                }}
+                className="inline-flex min-h-11 items-center gap-2 rounded-full border border-white/25 bg-black/50 px-4 py-3 text-xs font-black text-white backdrop-blur transition hover:bg-white/10 sm:text-sm"
+              >
+                <span aria-hidden="true">⇩</span>
+                Play / Download with MovieBox-TUI
+              </button>
               <button
                 onClick={() => setPlaybackMode('content')}
                 className="inline-flex items-center gap-2 rounded-full bg-white px-7 py-3 text-sm font-black text-black transition hover:bg-cream"
@@ -684,7 +694,7 @@ function PlayerView({
   ].filter(Boolean)
 
   return (
-    <div className="min-h-[calc(100dvh-4rem)] bg-ink pt-16">
+    <div className="mobile-player-view min-h-[calc(100dvh-4rem)] bg-ink pt-16">
       <div className="hidden w-full grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 border-b border-white/10 bg-ink px-6 py-2 lg:grid lg:px-10">
         <button onClick={onClose} className="inline-flex min-h-10 shrink-0 items-center gap-1 text-sm font-bold text-cream/80 transition hover:text-white">
           <ChevronLeftIcon className="h-5 w-5" /> Back to details
@@ -744,7 +754,7 @@ function PlayerView({
 
       <div
         ref={containerRef}
-        className="watch-player-shell group relative mx-auto w-full overflow-hidden bg-black shadow-2xl shadow-black/30"
+        className={`watch-player-shell ${movieBoxTuiSelected ? 'moviebox-tui-shell' : ''} group relative mx-auto w-full overflow-hidden bg-black shadow-2xl shadow-black/30`}
         style={{
           width: '100%',
           height: 'min(56.25vw, 76svh)',
