@@ -9,7 +9,7 @@ export default function HistoryPage() {
   const [confirmClear, setConfirmClear] = useState(false)
 
   return (
-    <div className="mx-auto max-w-screen-2xl px-4 pb-16 pt-24 sm:px-6 lg:px-10">
+    <div className="mobile-library-page mx-auto max-w-screen-2xl px-4 pb-16 pt-24 sm:px-6 lg:px-10">
       <div className="mb-2 flex items-start justify-between gap-4">
         <div>
           <h1 className="text-2xl font-black text-white sm:text-3xl">Watch History</h1>
