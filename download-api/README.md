@@ -9,10 +9,11 @@ This folder contains the HTTP service used by the RoyverseMoviez website. The Mo
 3. When the service is live, open `https://YOUR-SERVICE.onrender.com/health`. It should return JSON with `"ok": true`.
 4. In RoyverseMoviez, open **Settings → Download Backend**, paste the service's `https://...` URL and select **Test connection**.
 
-The site can also receive a shared default URL through the GitHub Actions repository variable `VITE_DOWNLOAD_API_URL`. The value entered in Settings is saved in the current browser.
+The value entered in Settings is saved in the current browser. The same backend also provides `GET /tmdb/{path}` as a fixed-host TMDB API proxy. Once the backend URL is configured, the frontend retries a browser-side TMDB network timeout through this route.
 
 ## API flow
 
+- `GET /tmdb/{path}?api_key=...` forwards TMDB API requests to the fixed `api.themoviedb.org/3` host (for example `/tmdb/search/tv`). It forwards v4 Bearer auth when present.
 - `GET /api/search?title=...&year=...&mediaType=movie|tv` searches MovieBox and ranks results against the TMDB title/year.
 - `GET /api/details?subjectId=...` returns languages, seasons and episodes.
 - `GET /api/streams?subjectId=...&season=...&episode=...` returns available qualities without exposing signed source URLs to the browser.
