@@ -35,7 +35,7 @@ export default function DownloadsPage() {
   const [error, setError] = useState('')
 
   const selectedMatch = matches.find((item) => item.subjectId === selectedSubjectId) || null
-  const isSeries = mediaType === 'tv' || details?.mediaType === 'series'
+  const isSeries = mediaType === 'tv' || details?.media_type === 'series' || details?.mediaType === 'series'
   const availableSeasons = details?.seasons || []
   const selectedSeason = availableSeasons.find((item) => Number(item.number) === Number(season))
   const availableEpisodes = selectedSeason?.episodes || []
@@ -76,7 +76,7 @@ export default function DownloadsPage() {
       const seasons = Array.isArray(data.seasons) ? data.seasons : []
       const requested = seasons.find((item) => Number(item.number) === initialSeason)
       const firstSeason = requested || seasons[0]
-      if (isSeries || data.mediaType === 'series') {
+      if (mediaType === 'tv' || data.media_type === 'series' || data.mediaType === 'series') {
         const nextSeason = Number(firstSeason?.number || initialSeason)
         const firstEpisode = firstSeason?.episodes?.find((item) => Number(item.number) === initialEpisode)
           || firstSeason?.episodes?.[0]
@@ -91,7 +91,7 @@ export default function DownloadsPage() {
     } finally {
       setDetailsLoading(false)
     }
-  }, [baseUrl, initialEpisode, initialSeason, isSeries])
+  }, [baseUrl, initialEpisode, initialSeason, mediaType])
 
   useEffect(() => {
     let active = true
