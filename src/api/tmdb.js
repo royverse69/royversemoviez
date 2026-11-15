@@ -94,9 +94,11 @@ async function fetchJsonWithTimeout(url, headers = {}, timeoutMs = 10000) {
 function makeProxyUrl(path, directUrl) {
   const backend = getDownloadApiBaseUrl()
   if (!backend) return null
+
   const cleanPath = String(path || '').split('/').filter(Boolean).join('/')
   let backendBase = String(backend).trim()
   while (backendBase.endsWith('/')) backendBase = backendBase.slice(0, -1)
+
   const proxyUrl = new URL(`tmdb/${cleanPath}`, `${backendBase}/`)
   directUrl.searchParams.forEach((value, key) => proxyUrl.searchParams.set(key, value))
   return proxyUrl
@@ -106,15 +108,17 @@ async function fetchTmdb(path, directUrl, headers = {}, timeoutMs = 10000) {
   try {
     return await fetchJsonWithTimeout(directUrl, headers, timeoutMs)
   } catch (directError) {
-    // Never retry invalid credentials through the proxy. Only connection and upstream failures
-    // are recoverable by moving the request off the visitor's network.
-    const retryable = directError?.networkFailure || directError?.status >= 500 || directError?.status === 429
-  let backendBase = String(backend).trim()
-  while (backendBase.endsWith('/')) backendBase = backendBase.slice(0, -1)
-  const proxyUrl = new URL(`tmdb/${cleanPath}`, `${backendBase}/`)
+    // Invalid credentials are not a network problem; all other connection/upstream
+    // failures can be retried from the backend's network instead of the visitor's ISP.
+    const retryable =
+      directError?.networkFailure || directError?.status >= 500 || directError?.status === 429
+    const proxyUrl = retryable ? makeProxyUrl(path, directUrl) : null
+
     if (!proxyUrl) {
       if (directError?.networkFailure) {
-        throw new Error('The browser cannot reach api.themoviedb.org. Configure the Download Backend URL in Settings to retry TMDB through the server.')
+        throw new Error(
+          'The browser cannot reach api.themoviedb.org. Configure the Download Backend URL in Settings to retry TMDB through the server.'
+        )
       }
       throw directError
     }
@@ -122,7 +126,9 @@ async function fetchTmdb(path, directUrl, headers = {}, timeoutMs = 10000) {
     try {
       return await fetchJsonWithTimeout(proxyUrl, headers, 18000)
     } catch (proxyError) {
-      throw new Error(`TMDB direct connection failed and the server proxy could not complete the request: ${proxyError.message}`)
+      throw new Error(
+        `TMDB direct connection failed and the server proxy could not complete the request: ${proxyError.message}`
+      )
     }
   }
 }
