@@ -481,13 +481,6 @@ input, textarea, select {
   select, input, textarea {
     max-width: 100%;
   }
-  .moviebox-tui-shell {
-    min-height: min(780px, 86svh) !important;
-    height: auto !important;
-    max-width: 100vw !important;
-    aspect-ratio: auto !important;
-    margin-inline: 0 !important;
-  }
 
   .mobile-watch-detail-page .mobile-detail-hero {
     min-height: 59svh;
