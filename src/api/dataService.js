@@ -341,7 +341,7 @@ async function fetchFastestStreamXSearch(query, mediaType, page = 1) {
     url.searchParams.set('type', type)
     url.searchParams.set('skip', String(skip))
     const data = await fetchJsonWithTimeout(url.toString(), {}, 6500)
-    if (!Array.isArray(data.metas)) throw new Error('StreamX returned an invalid search response')
+    if (!Array.isArray(data.metas) || data.metas.length === 0) throw new Error('StreamX returned no matching titles')
     return { base, metas: data.metas }
   })
   const result = await Promise.any(requests)
