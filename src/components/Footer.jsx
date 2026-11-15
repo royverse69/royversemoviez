@@ -4,7 +4,7 @@ import BrandMark from './BrandMark.jsx'
 
 export default function Footer() {
   return (
-    <footer className="mt-16 border-t border-white/10 bg-ink">
+    <footer className="site-footer mt-16 border-t border-white/10 bg-ink">
       <div className="mx-auto grid max-w-screen-2xl gap-10 px-4 py-12 sm:grid-cols-2 sm:px-6 lg:grid-cols-4 lg:px-10">
         <div>
           <Link to="/" className="flex items-center gap-2 text-brand">
