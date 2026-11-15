@@ -683,21 +683,19 @@ function PlayerView({
 
   return (
     <div className="min-h-[calc(100dvh-4rem)] bg-ink pt-16">
-      <div className="grid w-full grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 border-b border-white/10 bg-ink px-3 py-2 sm:px-6 lg:px-10">
-        <button onClick={onClose} className="inline-flex min-h-10 shrink-0 items-center gap-1 text-xs font-bold text-cream/80 transition hover:text-white sm:text-sm">
-          <ChevronLeftIcon className="h-5 w-5" />
-          <span className="sm:hidden">Back</span>
-          <span className="hidden sm:inline">Back to details</span>
+      <div className="hidden w-full grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 border-b border-white/10 bg-ink px-6 py-2 lg:grid lg:px-10">
+        <button onClick={onClose} className="inline-flex min-h-10 shrink-0 items-center gap-1 text-sm font-bold text-cream/80 transition hover:text-white">
+          <ChevronLeftIcon className="h-5 w-5" /> Back to details
         </button>
-        <p className="min-w-0 truncate px-1 text-center text-[10px] font-bold uppercase tracking-wider text-mist sm:text-xs">
+        <p className="min-w-0 truncate px-2 text-center text-xs font-bold uppercase tracking-wider text-mist">
           {mode === 'trailer' ? `${media.title} trailer` : mediaType === 'tv' ? `${media.title} · S${season} E${episode}` : media.title}
         </p>
-        <div className="flex min-w-0 shrink-0 items-center gap-1.5 sm:gap-2">
+        <div className="flex shrink-0 items-center gap-2">
           {mode === 'content' && (
             <select
               value={providerId}
               onChange={(event) => { setFallbackMessage(''); setProvider(event.target.value) }}
-              className="w-[min(38vw,170px)] min-w-0 rounded-lg border border-white/15 bg-surface px-2 py-2.5 text-[10px] font-bold text-white outline-none sm:w-auto sm:px-3 sm:text-xs"
+              className="min-w-[164px] max-w-[220px] rounded-lg border border-white/15 bg-surface px-3 py-2.5 text-xs font-bold text-white outline-none"
               aria-label="Streaming provider"
             >
               {PROVIDERS.map((provider) => <option key={provider.id} value={provider.id}>{provider.name}</option>)}
@@ -707,6 +705,33 @@ function PlayerView({
             <FullscreenIcon className="h-4 w-4" />
           </button>
         </div>
+      </div>
+
+      <div className="flex w-full flex-col gap-2 border-b border-white/10 bg-ink px-3 py-2 lg:hidden">
+        <div className="flex min-w-0 items-center justify-between gap-2">
+          <button onClick={onClose} className="inline-flex min-h-10 shrink-0 items-center gap-1.5 rounded-lg px-1.5 text-xs font-bold text-cream/85 transition hover:bg-white/5" aria-label="Back to details">
+            <ChevronLeftIcon className="h-5 w-5" /> Back
+          </button>
+          <p className="min-w-0 flex-1 truncate text-center text-[10px] font-bold uppercase tracking-wider text-mist">
+            {mode === 'trailer' ? `${media.title} trailer` : mediaType === 'tv' ? `${media.title} · S${season} E${episode}` : media.title}
+          </p>
+          <button onClick={toggleFullscreen} className="grid h-10 w-10 shrink-0 place-items-center rounded-lg border border-white/15 bg-surface text-white" aria-label="Toggle fullscreen">
+            <FullscreenIcon className="h-4 w-4" />
+          </button>
+        </div>
+        {mode === 'content' && (
+          <div className="flex min-w-0 items-center gap-2">
+            <span className="shrink-0 text-[9px] font-black uppercase tracking-wider text-mist">Source</span>
+            <select
+              value={providerId}
+              onChange={(event) => { setFallbackMessage(''); setProvider(event.target.value) }}
+              className="min-h-10 min-w-0 flex-1 rounded-lg border border-white/15 bg-surface px-3 py-2 text-xs font-bold text-white outline-none"
+              aria-label="Streaming provider"
+            >
+              {PROVIDERS.map((provider) => <option key={provider.id} value={provider.id}>{provider.name}</option>)}
+            </select>
+          </div>
+        )}
       </div>
 
       {fallbackMessage && (
@@ -795,7 +820,7 @@ function PlayerView({
               <select
                 value={season}
                 onChange={(event) => onSeasonChange(Number(event.target.value))}
-                className="min-h-11 rounded-lg border border-white/15 bg-surface px-3 py-2.5 text-xs font-bold text-white outline-none"
+                className="min-h-11 w-auto min-w-[140px] max-w-full rounded-lg border border-white/15 bg-surface px-3 py-2.5 text-xs font-bold text-white outline-none"
                 aria-label="Select season"
               >
                 {seasons.map((item) => <option key={item.season_number} value={item.season_number}>Season {item.season_number}</option>)}
