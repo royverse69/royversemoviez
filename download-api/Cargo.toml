@@ -1,0 +1,18 @@
+[package]
+name = "royverse-moviebox-api"
+version = "0.1.0"
+edition = "2024"
+publish = false
+
+[dependencies]
+axum = "0.8"
+futures-util = "0.3"
+moviebox-tui = "0.1.29"
+reqwest = { version = "0.12", default-features = false, features = ["rustls-tls", "stream"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+tempfile = "3"
+tokio = { version = "1.52", features = ["macros", "rt-multi-thread", "net", "process", "fs", "signal", "time"] }
+tokio-util = { version = "0.7", features = ["io"] }
+tower-http = { version = "0.6", features = ["cors"] }
+url = "2"
