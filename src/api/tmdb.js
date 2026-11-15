@@ -105,31 +105,34 @@ function makeProxyUrl(path, directUrl) {
 }
 
 async function fetchTmdb(path, directUrl, headers = {}, timeoutMs = 10000) {
-  try {
-    return await fetchJsonWithTimeout(directUrl, headers, timeoutMs)
-  } catch (directError) {
-    // Invalid credentials are not a network problem; all other connection/upstream
-    // failures can be retried from the backend's network instead of the visitor's ISP.
-    const retryable =
-      directError?.networkFailure || directError?.status >= 500 || directError?.status === 429
-    const proxyUrl = retryable ? makeProxyUrl(path, directUrl) : null
+  const proxyUrl = makeProxyUrl(path, directUrl)
 
-    if (!proxyUrl) {
-      if (directError?.networkFailure) {
-        throw new Error(
-          'The browser cannot reach api.themoviedb.org. Configure the Download Backend URL in Settings to retry TMDB through the server.'
-        )
-      }
-      throw directError
-    }
-
+  // When a backend is configured, use its network first. This avoids making every
+  // page wait for a known-unreachable TMDB host before retrying from the server.
+  if (proxyUrl) {
     try {
       return await fetchJsonWithTimeout(proxyUrl, headers, 18000)
     } catch (proxyError) {
+      if (proxyError?.status === 401 || proxyError?.status === 403) throw proxyError
+      try {
+        return await fetchJsonWithTimeout(directUrl, headers, timeoutMs)
+      } catch (directError) {
+        throw new Error(
+          `TMDB could not be reached through the backend (${proxyError.message}) or directly (${directError.message}).`
+        )
+      }
+    }
+  }
+
+  try {
+    return await fetchJsonWithTimeout(directUrl, headers, timeoutMs)
+  } catch (directError) {
+    if (directError?.networkFailure) {
       throw new Error(
-        `TMDB direct connection failed and the server proxy could not complete the request: ${proxyError.message}`
+        'The browser cannot reach api.themoviedb.org. Deploy the RoyverseMoviez backend and add its URL in Settings → Download Backend to use the TMDB proxy.'
       )
     }
+    throw directError
   }
 }
 
