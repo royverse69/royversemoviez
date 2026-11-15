@@ -1,0 +1,9 @@
+services:
+  - type: web
+    name: royverse-moviebox-api
+    runtime: docker
+    plan: free
+    dockerfilePath: ./download-api/Dockerfile
+    dockerContext: ./download-api
+    healthCheckPath: /health
+    autoDeployTrigger: commit
