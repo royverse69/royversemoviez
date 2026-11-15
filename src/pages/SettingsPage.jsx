@@ -15,6 +15,8 @@ export default function SettingsPage() {
   const [partyWorkerUrl, setPartyWorkerUrl] = useLocalStorage('royversemoviez.party-ws-url', '')
   const [omdbApiKey, setOmdbApiKey] = useLocalStorage('royversemoviez.omdb-api-key', '')
   const [traktClientId, setTraktClientId] = useLocalStorage('royversemoviez.trakt-client-id', '')
+  const [downloadApiUrl, setDownloadApiUrl] = useLocalStorage('royversemoviez.download-api-url', import.meta.env.VITE_DOWNLOAD_API_URL || '')
+  const [downloadApiTest, setDownloadApiTest] = useState({ status: 'idle', message: '' })
   const [workerTest, setWorkerTest] = useState({ status: 'idle', message: '' })
   const [draft, setDraft] = useState(apiKey)
   const [showKey, setShowKey] = useState(false)
@@ -52,6 +54,23 @@ export default function SettingsPage() {
     updateApiKey('')
     setDraft('')
     setMessage({ type: 'success', text: 'API key removed. Add your own key to restore the live catalog.' })
+  }
+
+  const testDownloadApi = async () => {
+    setDownloadApiTest({ status: 'testing', message: 'Checking the download backend…' })
+    try {
+      const base = new URL(downloadApiUrl.trim())
+      if (!['https:', 'http:'].includes(base.protocol)) throw new Error('Use an https:// backend URL.')
+      base.pathname = `${base.pathname.replace(/[/]+$/, '')}/health`
+      base.search = ''
+      base.hash = ''
+      const response = await fetch(base.toString(), { cache: 'no-store' })
+      const data = await response.json()
+      if (!response.ok || !data.ok) throw new Error(data.error || 'The backend health check failed.')
+      setDownloadApiTest({ status: 'success', message: 'Connected — MovieBox-TUI backend is responding.' })
+    } catch (error) {
+      setDownloadApiTest({ status: 'error', message: error.message || 'Could not reach the download backend.' })
+    }
   }
 
   const testPartyWorker = async () => {
@@ -156,6 +175,56 @@ export default function SettingsPage() {
               Remove
             </button>
           )}
+        </div>
+      </div>
+
+      {/* MovieBox-TUI download backend */}
+      <div className="mt-6 rounded-2xl border border-white/12 bg-surface p-4 sm:p-5">
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <h2 className="text-lg font-extrabold text-white">Download Backend</h2>
+            <p className="mt-0.5 text-xs text-mist">MovieBox-TUI search, audio languages, episodes and file downloads</p>
+          </div>
+          <span className={`rounded-md border px-2 py-1.5 text-[8px] font-black uppercase tracking-wider ${downloadApiUrl ? 'border-emerald-400/25 bg-emerald-400/10 text-emerald-300' : 'border-amber-400/25 bg-amber-400/10 text-amber-300'}`}>
+            {downloadApiUrl ? 'URL saved' : 'Not connected'}
+          </span>
+        </div>
+        <label className="mt-5 block text-[10px] font-black uppercase tracking-[0.16em] text-mist">Backend URL</label>
+        <input
+          type="url"
+          value={downloadApiUrl}
+          onChange={(event) => { setDownloadApiUrl(event.target.value); setDownloadApiTest({ status: 'idle', message: '' }) }}
+          placeholder="https://royverse-moviebox-api.onrender.com"
+          autoCapitalize="none"
+          autoComplete="url"
+          spellCheck={false}
+          className="mt-2 min-h-12 w-full rounded-lg border border-white/12 bg-[#0d0d0d] px-3.5 text-sm text-white outline-none placeholder:text-mist/60 focus:border-brand"
+        />
+        <p className="mt-2 text-[10px] leading-relaxed text-mist">
+          Deploy the included Render Blueprint once, then paste its service URL here. The URL is saved in this browser; VITE_DOWNLOAD_API_URL can also set a shared default at build time.
+        </p>
+        {downloadApiTest.message && (
+          <p role="status" className={`mt-3 text-xs leading-5 ${downloadApiTest.status === 'error' ? 'text-red-300' : downloadApiTest.status === 'success' ? 'text-emerald-300' : 'text-mist'}`}>
+            {downloadApiTest.message}
+          </p>
+        )}
+        <div className="mt-3 flex flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={testDownloadApi}
+            disabled={!downloadApiUrl.trim() || downloadApiTest.status === 'testing'}
+            className="min-h-10 rounded-lg bg-white px-4 text-xs font-black text-black transition hover:bg-cream disabled:opacity-40"
+          >
+            {downloadApiTest.status === 'testing' ? 'Testing…' : 'Test connection'}
+          </button>
+          <button
+            type="button"
+            onClick={() => { setDownloadApiUrl(''); setDownloadApiTest({ status: 'idle', message: '' }) }}
+            disabled={!downloadApiUrl}
+            className="min-h-10 rounded-lg border border-white/15 px-4 text-xs font-bold text-cream transition hover:bg-white/5 disabled:opacity-40"
+          >
+            Clear URL
+          </button>
         </div>
       </div>
 
