@@ -257,7 +257,7 @@ export default function WatchPage() {
 
             <div className="mt-7 flex flex-wrap items-center gap-3">
               <Link
-                to={`/downloads?title=${encodeURIComponent(media.title)}`}
+                to={`/downloads?tmdbId=${encodeURIComponent(id)}&type=${mediaType}&title=${encodeURIComponent(media.title)}&year=${encodeURIComponent(media.year || '')}&season=${mediaType === 'tv' ? season : ''}&episode=${mediaType === 'tv' ? episode : ''}`}
                 className="inline-flex min-h-11 items-center gap-2 rounded-full border border-white/25 bg-black/50 px-4 py-3 text-xs font-black text-white backdrop-blur transition hover:bg-white/10 sm:text-sm"
               >
                 <span aria-hidden="true">↓</span>
