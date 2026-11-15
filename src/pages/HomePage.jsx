@@ -26,6 +26,19 @@ export default function HomePage() {
 
   return (
     <div className="pb-10">
+      {trending.error && (
+        <div role="alert" className="mx-4 mt-6 flex flex-col gap-3 rounded-xl border border-red-400/20 bg-red-400/5 p-4 sm:mx-6 lg:mx-10 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <p className="text-sm font-bold text-white">TMDB catalogue could not load</p>
+            <p className="mt-1 text-xs leading-5 text-red-200/90">{trending.error.message || 'Check the TMDB connection and try again.'}</p>
+          </div>
+          <div className="flex shrink-0 gap-2">
+            <Link to="/settings" className="inline-flex min-h-9 items-center rounded-lg bg-white px-3 text-xs font-black text-black">TMDB Settings</Link>
+            <button onClick={trending.retry} className="min-h-9 rounded-lg border border-white/20 px-3 text-xs font-bold text-white hover:bg-white/5">Retry</button>
+          </div>
+        </div>
+      )}
+
       <FeaturedCarousel items={featured} />
 
       <div className="relative z-10 mt-4 space-y-8 sm:mt-6 sm:space-y-10">
