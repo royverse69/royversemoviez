@@ -40,30 +40,78 @@ export const stillUrl = (path, size = 'w500') =>
 export const videosPath = (mediaType, id) =>
   `${mediaType === 'tv' ? '/tv' : '/movie'}/${id}/videos`
 
+function usesV4AccessToken(value) {
+  const token = String(value || '').trim()
+  // TMDB v4 Read Access Tokens are long JWT-style credentials; v3 API keys are 32 characters.
+  return token.length > 80 || token.split('.').length === 3
+}
+
+function requestAuth(key) {
+  return usesV4AccessToken(key)
+    ? { headers: { Authorization: `Bearer ${key}` } }
+    : { queryKey: key }
+}
+
 async function request(path, params = {}) {
+  const credential = tmdbApiKey
+  if (!credential) {
+    throw new Error('TMDB is not configured. Add a v3 API key or v4 Read Access Token in Settings.')
+  }
+
   const url = new URL(`${API_BASE}${path}`)
-  url.searchParams.set('api_key', tmdbApiKey)
   url.searchParams.set('language', 'en-US')
+  const auth = requestAuth(credential)
+  if (auth.queryKey) url.searchParams.set('api_key', auth.queryKey)
   Object.entries(params).forEach(([key, value]) => {
     if (value !== undefined && value !== null && value !== '') {
       url.searchParams.set(key, value)
     }
   })
-  const res = await fetch(url)
-  if (!res.ok) {
-    throw new Error(`TMDB request failed (${res.status})`)
+
+  const controller = new AbortController()
+  const timeout = window.setTimeout(() => controller.abort(), 15000)
+  try {
+    const res = await fetch(url, {
+      ...(auth.headers ? { headers: auth.headers } : {}),
+      signal: controller.signal,
+      cache: 'no-store',
+    })
+    const payload = await res.json().catch(() => null)
+    if (!res.ok) {
+      const detail = payload?.status_message || payload?.message
+      if (res.status === 401 || res.status === 403) {
+        throw new Error('TMDB authentication failed. Check the v3 API key or v4 Read Access Token in Settings.')
+      }
+      throw new Error(detail || `TMDB request failed (HTTP ${res.status}).`)
+    }
+    return payload
+  } catch (error) {
+    if (error?.name === 'AbortError') throw new Error('TMDB request timed out. Check your connection and try again.')
+    throw error
+  } finally {
+    window.clearTimeout(timeout)
   }
-  return res.json()
 }
 
 export async function validateTmdbApiKey(value) {
-  const key = String(value || '').trim()
-  if (!key) return false
+  const credential = String(value || '').trim()
+  if (!credential) return false
 
   const url = new URL(`${API_BASE}/configuration`)
-  url.searchParams.set('api_key', key)
-  const res = await fetch(url)
-  return res.ok
+  const auth = requestAuth(credential)
+  if (auth.queryKey) url.searchParams.set('api_key', auth.queryKey)
+  const controller = new AbortController()
+  const timeout = window.setTimeout(() => controller.abort(), 12000)
+  try {
+    const response = await fetch(url, {
+      ...(auth.headers ? { headers: auth.headers } : {}),
+      signal: controller.signal,
+      cache: 'no-store',
+    })
+    return response.ok
+  } finally {
+    window.clearTimeout(timeout)
+  }
 }
 
 // TMDB refuses page numbers above 500 regardless of total_pages.
