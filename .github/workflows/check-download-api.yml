@@ -1,0 +1,31 @@
+name: Check MovieBox-TUI download API
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'download-api/**'
+      - 'render.yaml'
+      - '.github/workflows/check-download-api.yml'
+  pull_request:
+    paths:
+      - 'download-api/**'
+      - 'render.yaml'
+      - '.github/workflows/check-download-api.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  cargo-check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+      - name: Cache Cargo
+        uses: Swatinem/rust-cache@v2
+      - name: Check API
+        run: cargo check --manifest-path download-api/Cargo.toml
