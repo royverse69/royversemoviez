@@ -201,7 +201,7 @@ export default function SettingsPage() {
           className="mt-2 min-h-12 w-full rounded-lg border border-white/12 bg-[#0d0d0d] px-3.5 text-sm text-white outline-none placeholder:text-mist/60 focus:border-brand"
         />
         <p className="mt-2 text-[10px] leading-relaxed text-mist">
-          Deploy the included Render Blueprint once, then paste its service URL here. The URL is saved in this browser; VITE_DOWNLOAD_API_URL can also set a shared default at build time.
+          Deploy the included Render Blueprint once, then paste its service URL here. It also acts as a TMDB network proxy when the browser cannot reach TMDB directly. The URL is saved in this browser.
         </p>
         {downloadApiTest.message && (
           <p role="status" className={`mt-3 text-xs leading-5 ${downloadApiTest.status === 'error' ? 'text-red-300' : downloadApiTest.status === 'success' ? 'text-emerald-300' : 'text-mist'}`}>
