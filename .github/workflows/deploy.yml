@@ -36,6 +36,8 @@ jobs:
         run: npm run build
         env:
           VITE_PARTY_WS_URL: ${{ vars.VITE_PARTY_WS_URL || secrets.VITE_PARTY_WS_URL }}
+          VITE_TMDB_API_KEY: ${{ vars.VITE_TMDB_API_KEY || secrets.VITE_TMDB_API_KEY }}
+          VITE_DOWNLOAD_API_URL: ${{ vars.VITE_DOWNLOAD_API_URL || secrets.VITE_DOWNLOAD_API_URL }}
 
       - name: Upload production build
         uses: actions/upload-pages-artifact@v3
