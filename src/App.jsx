@@ -19,6 +19,7 @@ import MoviesPage from './pages/MoviesPage.jsx'
 import SeriesPage from './pages/SeriesPage.jsx'
 import WatchPage from './pages/WatchPage.jsx'
 import SettingsPage from './pages/SettingsPage.jsx'
+import DownloadsPage from './pages/DownloadsPage.jsx'
 import WatchPartyPage from './pages/WatchPartyPage.jsx'
 import WatchPartyRoom from './pages/WatchPartyRoom.jsx'
 import ConsentGate from './components/ConsentGate.jsx'
@@ -44,6 +45,7 @@ function AppLayout() {
             <Route path="/mylist" element={<MyListPage />} />
             <Route path="/history" element={<HistoryPage />} />
             <Route path="/settings" element={<SettingsPage />} />
+            <Route path="/downloads" element={<DownloadsPage />} />
             <Route path="/genre/:id" element={<GenrePage />} />
             <Route path="*" element={<HomePage />} />
           </Routes>
