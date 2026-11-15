@@ -36,7 +36,7 @@ export default function Navbar() {
   return (
     <>
     <header
-      className={`fixed inset-x-0 top-0 z-40 transition-colors duration-500 ${
+      className={`site-mobile-header ${immersive ? 'hidden lg:block ' : ''} fixed inset-x-0 top-0 z-40 transition-colors duration-500 ${
         scrolled || menuOpen
           ? 'bg-ink/95 shadow-lg shadow-black/40 backdrop-blur'
           : 'bg-gradient-to-b from-black/70 via-black/20 to-transparent'
@@ -149,27 +149,34 @@ export default function Navbar() {
     {!immersive && (
       <nav
         aria-label="Mobile primary navigation"
-        className="fixed inset-x-0 bottom-0 z-50 grid h-[calc(4rem+env(safe-area-inset-bottom))] grid-cols-5 border-t border-white/10 bg-[#080808]/95 px-1 pt-1 shadow-[0_-8px_30px_rgba(0,0,0,.35)] backdrop-blur-xl lg:hidden"
+        className="mobile-bottom-nav fixed inset-x-0 bottom-0 z-50 grid h-[calc(3.8rem+env(safe-area-inset-bottom))] grid-cols-5 border-t border-white/10 bg-[#080808]/95 px-1 pt-1 shadow-[0_-8px_30px_rgba(0,0,0,.35)] backdrop-blur-xl lg:hidden"
       >
         {[
-          { to: '/', label: 'Home', glyph: '⌂', end: true },
-          { to: '/movies', label: 'Movies', glyph: '▣' },
-          { to: '/series', label: 'Series', glyph: '▤' },
-          { to: '/party', label: 'Party', glyph: '◉' },
-          { to: '/mylist', label: 'My List', glyph: '＋' },
+          { to: '/', label: 'Home', key: 'home', end: true },
+          { to: '/search', label: 'Search', key: 'search' },
+          { to: '/movies', label: 'New & Hot', key: 'new' },
+          { to: '/downloads', label: 'Downloads', key: 'download' },
+          { to: '/mylist', label: 'My Netflix', key: 'list' },
         ].map((item) => (
           <NavLink
             key={item.to}
             to={item.to}
             end={item.end}
-            className={({ isActive }) => `flex min-w-0 flex-col items-center justify-center gap-0.5 rounded-lg px-1 pb-[env(safe-area-inset-bottom)] text-[9px] font-extrabold transition-colors ${isActive ? 'text-brand' : 'text-cream/55 hover:text-white'}`}
+            className={({ isActive }) => `flex min-w-0 flex-col items-center justify-center gap-1 rounded-lg px-1 pb-[env(safe-area-inset-bottom)] text-[9px] font-bold transition-colors ${isActive ? 'text-white' : 'text-white/55 hover:text-white'}`}
           >
-            <span aria-hidden="true" className="text-[19px] leading-5">{item.glyph}</span>
+            <span aria-hidden="true" className="grid h-5 w-6 place-items-center">
+              {item.key === 'home' && <svg viewBox="0 0 24 24" className="h-[19px] w-[19px]" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="m3 10 9-7 9 7v10a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1z" strokeLinejoin="round"/></svg>}
+              {item.key === 'search' && <SearchIcon className="h-[19px] w-[19px]" />}
+              {item.key === 'new' && <svg viewBox="0 0 24 24" className="h-[19px] w-[19px]" fill="none" stroke="currentColor" strokeWidth="1.8"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M8 4v16M8 10h13" strokeLinejoin="round"/></svg>}
+              {item.key === 'download' && <svg viewBox="0 0 24 24" className="h-[19px] w-[19px]" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M12 3v12m-5-5 5 5 5-5M4 17v3h16v-3" strokeLinecap="round" strokeLinejoin="round"/></svg>}
+              {item.key === 'list' && <svg viewBox="0 0 24 24" className="h-[19px] w-[19px]" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M5 3h14a1 1 0 0 1 1 1v17l-8-4-8 4V4a1 1 0 0 1 1-1Z" strokeLinejoin="round"/></svg>}
+            </span>
             <span className="truncate">{item.label}</span>
           </NavLink>
         ))}
       </nav>
     )}
+
     </>
   )
 }
@@ -201,7 +208,7 @@ function CountrySelect() {
     }`
 
   return (
-    <div className="relative" ref={ref}>
+    <div className="relative hidden sm:block" ref={ref}>
       <button
         onClick={() => setOpen((o) => !o)}
         className="flex items-center gap-1.5 rounded-full px-2.5 py-2 text-cream/85 transition-colors hover:bg-white/10 hover:text-white"
