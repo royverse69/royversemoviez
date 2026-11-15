@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { searchMedia, getSeasonEpisodes } from '../api/dataService.js'
 import { posterUrl } from '../api/tmdb.js'
 import { useData } from '../hooks/useData.js'
+import { useLocalStorage } from '../hooks/useLocalStorage.js'
 
 export default function SearchPanel({ onChangeMedia }) {
   const [query, setQuery] = useState('')
@@ -10,6 +11,8 @@ export default function SearchPanel({ onChangeMedia }) {
   const [season, setSeason] = useState(1)
   const [episode, setEpisode] = useState(1)
   const [switched, setSwitched] = useState(false)
+  const [omdbApiKey] = useLocalStorage('royversemoviez.omdb-api-key', '')
+  const [traktClientId] = useLocalStorage('royversemoviez.trakt-client-id', '')
   const debounceRef = useRef(null)
 
   useEffect(() => {
@@ -18,9 +21,9 @@ export default function SearchPanel({ onChangeMedia }) {
     return () => clearTimeout(debounceRef.current)
   }, [query])
 
-  const { data: results, loading: searching } = useData(
-    () => (debouncedQuery ? searchMedia(debouncedQuery).catch(() => []) : Promise.resolve([])),
-    [debouncedQuery]
+  const { data: results, loading: searching, error: searchError, retry: retrySearch } = useData(
+    () => (debouncedQuery ? searchMedia(debouncedQuery, 1, { omdbApiKey, traktClientId }) : Promise.resolve([])),
+    [debouncedQuery, omdbApiKey, traktClientId]
   )
 
   const { data: episodes } = useData(
@@ -70,6 +73,12 @@ export default function SearchPanel({ onChangeMedia }) {
         className="min-h-11 w-full rounded-lg border border-white/15 bg-surface px-3 py-2 text-xs font-semibold text-white outline-none placeholder:text-mist/50 focus:border-brand"
       />
       {searching && <p className="mt-2 text-[10px] font-bold text-mist">Searching...</p>}
+      {searchError && !searching && (
+        <div className="mt-2 rounded-lg border border-red-500/20 bg-red-500/10 p-3">
+          <p className="text-[10px] leading-5 text-red-200">Search is unavailable. Check the catalog key in Settings or configure a Trakt Client ID.</p>
+          <button onClick={retrySearch} className="mt-2 min-h-8 rounded-md bg-white px-3 text-[10px] font-black text-black">Retry search</button>
+        </div>
+      )}
       {!selectedMedia && debouncedQuery && !searching && (
         <div className="mt-2 space-y-1 overflow-y-auto rounded-lg border border-white/10 p-1.5">
           {(results || []).slice(0, 8).map((media) => (
@@ -101,7 +110,7 @@ export default function SearchPanel({ onChangeMedia }) {
 
       {!selectedMedia && !debouncedQuery && (
         <p className="mt-4 text-center text-[11px] leading-snug text-mist">
-          Search TMDB and switch what the whole room is watching — no need to leave and create a new party.
+          Search the catalog and switch what the whole room is watching — no need to leave and create a new party.
         </p>
       )}
 
@@ -135,7 +144,7 @@ export default function SearchPanel({ onChangeMedia }) {
               <select
                 value={season}
                 onChange={(e) => setSeason(Number(e.target.value))}
-                className="flex-1 rounded-lg border border-white/15 bg-surface px-2 py-1.5 text-[10px] font-bold text-white outline-none"
+                className="min-w-0 flex-1 rounded-lg border border-white/15 bg-surface px-2 py-1.5 text-[10px] font-bold text-white outline-none"
               >
                 {selectedMedia.seasons
                   ?.filter((s) => s.season_number > 0)
