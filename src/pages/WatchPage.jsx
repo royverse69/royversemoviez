@@ -23,7 +23,6 @@ import { PROVIDERS, buildEmbedUrl } from '../data/providers.js'
 import { usePlayerBridge } from '../hooks/usePlayerBridge.js'
 import MovieCard from '../components/MovieCard.jsx'
 import PlayerEmbed from '../components/PlayerEmbed.jsx'
-import MovieBoxTuiHandoff from '../components/MovieBoxTuiHandoff.jsx'
 import {
   CheckIcon,
   ChevronLeftIcon,
@@ -257,16 +256,13 @@ export default function WatchPage() {
             )}
 
             <div className="mt-7 flex flex-wrap items-center gap-3">
-              <button
-                onClick={() => {
-                  setProvider('moviebox-tui')
-                  setPlaybackMode('content')
-                }}
+              <Link
+                to={`/downloads?title=${encodeURIComponent(media.title)}`}
                 className="inline-flex min-h-11 items-center gap-2 rounded-full border border-white/25 bg-black/50 px-4 py-3 text-xs font-black text-white backdrop-blur transition hover:bg-white/10 sm:text-sm"
               >
-                <span aria-hidden="true">⇩</span>
-                Play / Download with MovieBox-TUI
-              </button>
+                <span aria-hidden="true">↓</span>
+                Download
+              </Link>
               <button
                 onClick={() => setPlaybackMode('content')}
                 className="inline-flex items-center gap-2 rounded-full bg-white px-7 py-3 text-sm font-black text-black transition hover:bg-cream"
@@ -596,18 +592,17 @@ function PlayerView({
   const lastWrittenRef = useRef(null)
   const resumedForRef = useRef(null)
   const fallbackAttemptedRef = useRef(new Set())
-  const movieBoxTuiSelected = providerId === 'moviebox-tui'
   const [resumeNotice, setResumeNotice] = useState(null)
   const [fallbackMessage, setFallbackMessage] = useState('')
 
   const contentPlayerUrl = useMemo(
-    () => mode === 'content' && !movieBoxTuiSelected ? buildEmbedUrl(providerId, mediaType, id, season, episode) : null,
-    [mode, providerId, mediaType, id, season, episode, movieBoxTuiSelected]
+    () => mode === 'content' ? buildEmbedUrl(providerId, mediaType, id, season, episode) : null,
+    [mode, providerId, mediaType, id, season, episode]
   )
   const bridge = usePlayerBridge({
     iframeRef: playerIframeRef,
     playerUrl: contentPlayerUrl,
-    active: mode === 'content' && !movieBoxTuiSelected,
+    active: mode === 'content',
   })
 
   useEffect(() => {
@@ -619,7 +614,7 @@ function PlayerView({
   }, [mode, providerId, bridge.error, contentPlayerUrl, setProvider])
 
   useEffect(() => {
-    if (mode !== 'content' || movieBoxTuiSelected || !bridge.ready || !contentPlayerUrl) return
+    if (mode !== 'content' || !bridge.ready || !contentPlayerUrl) return
     if (resumedForRef.current === contentPlayerUrl) return
     resumedForRef.current = contentPlayerUrl
     setResumeNotice(null)
@@ -637,10 +632,10 @@ function PlayerView({
     setResumeNotice(target)
     const timer = window.setTimeout(() => setResumeNotice(null), 6000)
     return () => window.clearTimeout(timer)
-  }, [mode, movieBoxTuiSelected, bridge.ready, contentPlayerUrl, media.key, mediaType, season, episode, bridge.seek, bridge.play])
+  }, [mode, bridge.ready, contentPlayerUrl, media.key, mediaType, season, episode, bridge.seek, bridge.play])
 
   useEffect(() => {
-    if (mode !== 'content' || movieBoxTuiSelected) return
+    if (mode !== 'content') return
     const seasonNumber = mediaType === 'tv' ? season : null
     const episodeNumber = mediaType === 'tv' ? episode : null
     const write = () => {
@@ -655,15 +650,15 @@ function PlayerView({
       window.clearInterval(timer)
       write()
     }
-  }, [mode, movieBoxTuiSelected, bridge.getState, media.key, mediaType, season, episode, updatePosition])
+  }, [mode, bridge.getState, media.key, mediaType, season, episode, updatePosition])
 
   useEffect(() => {
-    if (!movieBoxTuiSelected && providerId === 'cinesrc' && bridge.ready) bridge.refresh()
-  }, [providerId, movieBoxTuiSelected, bridge.ready, bridge.refresh])
+    if (providerId === 'cinesrc' && bridge.ready) bridge.refresh()
+  }, [providerId, bridge.ready, bridge.refresh])
 
   useEffect(() => {
-    if (bridge.closed && !movieBoxTuiSelected) onClose()
-  }, [bridge.closed, movieBoxTuiSelected, onClose])
+    if (bridge.closed) onClose()
+  }, [bridge.closed, onClose])
 
   useEffect(() => {
     const onKey = (event) => {
@@ -754,7 +749,7 @@ function PlayerView({
 
       <div
         ref={containerRef}
-        className={`watch-player-shell ${movieBoxTuiSelected ? 'moviebox-tui-shell' : ''} group relative mx-auto w-full overflow-hidden bg-black shadow-2xl shadow-black/30`}
+        className="watch-player-shell group relative mx-auto w-full overflow-hidden bg-black shadow-2xl shadow-black/30"
         style={{
           width: '100%',
           height: 'min(56.25vw, 76svh)',
@@ -768,9 +763,7 @@ function PlayerView({
           </div>
         )}
 
-        {mode === 'content' && movieBoxTuiSelected ? (
-          <MovieBoxTuiHandoff title={media.title} mediaType={mediaType} />
-        ) : mode === 'trailer' && trailerUrl ? (
+        {mode === 'trailer' && trailerUrl ? (
           <iframe
             src={trailerUrl}
             title={`${media.title} trailer`}
