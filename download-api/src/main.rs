@@ -422,7 +422,7 @@ async fn proxy_direct_download(
         .header(CONTENT_DISPOSITION, attachment_header(&download_name))
         .header("X-Content-Type-Options", "nosniff");
 
-    for name in [CONTENT_LENGTH, CONTENT_RANGE, ACCEPT_RANGES] {
+    for name in ["content-length", "content-range", "accept-ranges"] {
         if let Some(value) = headers.get(name) {
             response = response.header(name, value.clone());
         }
