@@ -7,7 +7,7 @@ const ANDROID_INSTALL = 'pkg update && pkg install -y curl tar termux-tools term
 const UNIX_INSTALL = 'curl -fsSL https://raw.githubusercontent.com/mesamirh/MovieBox-Tui/main/install.sh | bash'
 const WINDOWS_INSTALL = 'irm https://raw.githubusercontent.com/mesamirh/MovieBox-Tui/main/install.ps1 | iex'
 
-export default function MovieBoxTuiHandoff({ title, mediaType }) {
+export default function MovieBoxTuiHandoff({ title, mediaType, embedded = false }) {
   const [platform, setPlatform] = useState(/Android/i.test(navigator.userAgent) ? 'android' : /Windows/i.test(navigator.userAgent) ? 'windows' : 'unix')
   const [copied, setCopied] = useState(false)
   const [titleCopied, setTitleCopied] = useState(false)
@@ -29,7 +29,7 @@ export default function MovieBoxTuiHandoff({ title, mediaType }) {
   }
 
   return (
-    <div className="absolute inset-0 overflow-y-auto bg-[radial-gradient(ellipse_at_top,rgba(229,9,20,.18),transparent_55%),#080808] text-white">
+    <div className={`${embedded ? "relative min-h-[calc(100dvh-8rem)] rounded-2xl" : "absolute inset-0"} overflow-y-auto bg-[radial-gradient(ellipse_at_top,rgba(229,9,20,.18),transparent_55%),#080808] text-white`}>
       <div className="mx-auto flex min-h-full w-full max-w-3xl flex-col justify-center px-4 py-7 sm:px-8 sm:py-10">
         <div className="mb-5 flex items-center gap-3">
           <div className="grid h-11 w-11 shrink-0 place-items-center rounded-xl border border-red-500/25 bg-red-500/10 text-red-400">
