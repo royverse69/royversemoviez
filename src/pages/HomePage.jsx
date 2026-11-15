@@ -9,7 +9,7 @@ import { usePreferences } from '../context/PreferencesContext.jsx'
 import FeaturedCarousel from '../components/FeaturedCarousel.jsx'
 import Row from '../components/Row.jsx'
 import MovieCard from '../components/MovieCard.jsx'
-import { posterUrl, POSTER_PLACEHOLDER } from '../api/tmdb.js'
+import { posterUrl, backdropUrl, POSTER_PLACEHOLDER } from '../api/tmdb.js'
 import { sortByPopularity } from '../data/media.js'
 import { HistoryIcon } from '../components/icons.jsx'
 
@@ -133,14 +133,20 @@ function ContinueWatchingRow({ items }) {
 }
 
 function HistoryCard({ entry }) {
+  const mobileMedia = {
+    ...entry,
+    poster: backdropUrl(entry.backdrop) || posterUrl(entry.poster, 'w342'),
+  }
+  const progress = { current: entry.positionSeconds, total: entry.durationSeconds }
   return (
-    <div className="w-[clamp(112px,28vw,184px)] shrink-0">
-      <MovieCard
-        media={entry}
-        getPath={watchPath}
-        progress={{ current: entry.positionSeconds, total: entry.durationSeconds }}
-      />
-    </div>
+    <>
+      <div className="hidden w-[clamp(112px,28vw,184px)] shrink-0 lg:block">
+        <MovieCard media={entry} getPath={watchPath} progress={progress} />
+      </div>
+      <div className="home-history-card w-[72vw] max-w-[270px] shrink-0 lg:hidden">
+        <MovieCard media={mobileMedia} getPath={watchPath} progress={progress} fill />
+      </div>
+    </>
   )
 }
 
