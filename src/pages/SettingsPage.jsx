@@ -76,7 +76,7 @@ export default function SettingsPage() {
   }
 
   return (
-    <div className="mx-auto max-w-screen-2xl px-4 pb-16 pt-24 sm:px-6 lg:px-10">
+    <div className="mobile-settings-page mx-auto max-w-screen-2xl px-4 pb-16 pt-24 sm:px-6 lg:px-10">
       <p className="mb-1 text-xs font-black uppercase tracking-[0.22em] text-brand">RoyverseMoviez</p>
       <h1 className="text-3xl font-black tracking-tight text-white sm:text-4xl">Settings</h1>
       <p className="mt-1.5 text-sm text-mist">Manage your catalog connection and saved titles.</p>
