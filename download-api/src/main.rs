@@ -1,10 +1,10 @@
 use axum::{
     body::Body,
-    extract::{Query, State},
+    extract::{Path, Query, RawQuery, State},
     http::{
         header::{
-            ACCEPT_RANGES, CONTENT_DISPOSITION, CONTENT_LENGTH, CONTENT_RANGE, CONTENT_TYPE,
-            HeaderName, HeaderValue, RANGE,
+            ACCEPT_RANGES, AUTHORIZATION, CACHE_CONTROL, CONTENT_DISPOSITION, CONTENT_LENGTH,
+            CONTENT_RANGE, CONTENT_TYPE, HeaderName, HeaderValue, RANGE,
         },
         HeaderMap, StatusCode,
     },
@@ -31,6 +31,7 @@ use url::Url;
 struct AppState {
     service: Arc<MovieBoxService>,
     http: reqwest::Client,
+    tmdb_http: reqwest::Client,
     work_slots: Arc<Semaphore>,
     download_slots: Arc<Semaphore>,
 }
@@ -123,15 +124,24 @@ async fn main() {
         .build()
         .expect("build download HTTP client");
 
+    let tmdb_http = reqwest::Client::builder()
+        .connect_timeout(Duration::from_secs(8))
+        .timeout(Duration::from_secs(20))
+        .pool_idle_timeout(Duration::from_secs(90))
+        .build()
+        .expect("build TMDB proxy HTTP client");
+
     let state = AppState {
         service,
         http,
+        tmdb_http,
         work_slots: Arc::new(Semaphore::new(8)),
         download_slots: Arc::new(Semaphore::new(2)),
     };
 
     let app = Router::new()
         .route("/health", get(health))
+        .route("/tmdb/{*path}", get(tmdb_proxy))
         .route("/api/search", get(search))
         .route("/api/details", get(details))
         .route("/api/streams", get(streams))
@@ -155,6 +165,62 @@ async fn main() {
         })
         .await
         .expect("serve API");
+}
+
+async fn tmdb_proxy(
+    State(state): State<AppState>,
+    Path(path): Path<String>,
+    RawQuery(raw_query): RawQuery,
+    request_headers: HeaderMap,
+) -> Result<Response, Response> {
+    // Restrict the catch-all route to ordinary TMDB API path segments. The upstream host
+    // is fixed, so this endpoint cannot be used as a general-purpose URL fetcher.
+    let valid_path = !path.is_empty()
+        && path.len() <= 300
+        && path.split('/').all(|part| {
+            !part.is_empty()
+                && part.chars().all(|character| {
+                    character.is_ascii_alphanumeric() || character == '_' || character == '-'
+                })
+        });
+    if !valid_path {
+        return Err(api_error(StatusCode::BAD_REQUEST, "Invalid TMDB API path."));
+    }
+
+    let mut target = format!("https://api.themoviedb.org/3/{path}");
+    if let Some(query) = raw_query.filter(|value| value.len() <= 4000) {
+        target.push('?');
+        target.push_str(&query);
+    }
+
+    let mut request = state.tmdb_http.get(&target);
+    if let Some(authorization) = request_headers.get(AUTHORIZATION) {
+        request = request.header(AUTHORIZATION, authorization.clone());
+    }
+
+    let upstream = request.send().await.map_err(|error| {
+        api_error(
+            StatusCode::BAD_GATEWAY,
+            format!("Could not reach TMDB from the backend: {error}"),
+        )
+    })?;
+
+    let status = upstream.status();
+    let content_type = upstream
+        .headers()
+        .get(CONTENT_TYPE)
+        .cloned()
+        .unwrap_or_else(|| HeaderValue::from_static("application/json"));
+    let body = upstream.bytes().await.map_err(|error| {
+        api_error(StatusCode::BAD_GATEWAY, format!("Could not read TMDB response: {error}"))
+    })?;
+
+    Response::builder()
+        .status(status)
+        .header(CONTENT_TYPE, content_type)
+        .header(CACHE_CONTROL, "no-store")
+        .body(Body::from(body))
+        .map_err(|error| api_error(StatusCode::INTERNAL_SERVER_ERROR, error.to_string()))
 }
 
 async fn health() -> Json<Health> {
