@@ -21,6 +21,7 @@ export default function CreatePartyModal({ onClose, onCreate }) {
   const [episode, setEpisode] = useState(1)
   const [creating, setCreating] = useState(false)
   const [omdbApiKey] = useLocalStorage('royversemoviez.omdb-api-key', '')
+  const [traktClientId] = useLocalStorage('royversemoviez.trakt-client-id', '')
   const debounceRef = useRef(null)
 
   useEffect(() => {
@@ -29,9 +30,9 @@ export default function CreatePartyModal({ onClose, onCreate }) {
     return () => clearTimeout(debounceRef.current)
   }, [searchQuery])
 
-  const { data: results, loading: searching } = useData(
-    () => (debouncedQuery ? searchMedia(debouncedQuery, 1, { omdbApiKey }).catch(() => []) : Promise.resolve([])),
-    [debouncedQuery, omdbApiKey]
+  const { data: results, loading: searching, error: searchError } = useData(
+    () => (debouncedQuery ? searchMedia(debouncedQuery, 1, { omdbApiKey, traktClientId }) : Promise.resolve([])),
+    [debouncedQuery, omdbApiKey, traktClientId]
   )
 
   const { data: episodes } = useData(
@@ -113,6 +114,17 @@ export default function CreatePartyModal({ onClose, onCreate }) {
           <div className="mb-4 flex items-center gap-2 text-sm text-mist">
             <SpinnerIcon className="h-4 w-4" /> Searching...
           </div>
+        )}
+        {searchError && !searching && (
+          <p role="status" className="mb-4 rounded-lg border border-red-500/20 bg-red-500/10 px-3 py-2.5 text-xs leading-5 text-red-200">
+            Search providers are temporarily unavailable. Check the TMDB key in Settings or add a Trakt Client ID for an independent fallback.
+          </p>
+        )}
+
+        {debouncedQuery && !searching && !searchError && results?.length === 0 && !selectedMedia && (
+          <p className="mb-4 rounded-lg border border-white/10 bg-white/[0.03] px-3 py-4 text-center text-xs text-mist">
+            No matching titles found.
+          </p>
         )}
 
         {debouncedQuery && !searching && results?.length > 0 && !selectedMedia && (
