@@ -179,8 +179,8 @@ export default function CreatePartyModal({ onClose, onCreate }) {
         )}
 
         {selectedMedia?.mediaType === 'tv' && (
-          <div className="mb-4 flex gap-3">
-            <div className="flex-1">
+          <div className="mb-4 grid min-w-0 grid-cols-2 gap-3">
+            <div className="min-w-0">
               <label className="mb-1.5 block text-xs font-bold uppercase tracking-wider text-mist">Season</label>
               <select
                 value={season}
@@ -196,7 +196,7 @@ export default function CreatePartyModal({ onClose, onCreate }) {
                   ))}
               </select>
             </div>
-            <div className="flex-1">
+            <div className="min-w-0">
               <label className="mb-1.5 block text-xs font-bold uppercase tracking-wider text-mist">Episode</label>
               <select
                 value={episode}
