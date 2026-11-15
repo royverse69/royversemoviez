@@ -51,7 +51,7 @@ export default function SearchPage() {
   const clearRecent = () => setRecent([])
 
   return (
-    <div className="mx-auto max-w-screen-2xl px-4 pb-16 pt-24 sm:px-6 lg:px-10">
+    <div className="mobile-search-page mx-auto max-w-screen-2xl px-4 pb-16 pt-24 sm:px-6 lg:px-10">
       <h1 className="mb-6 text-2xl font-black text-white sm:text-3xl">Search</h1>
 
       <div className="relative mb-8 max-w-2xl">
