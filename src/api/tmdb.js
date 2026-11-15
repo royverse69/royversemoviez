@@ -52,6 +52,78 @@ function requestAuth(key) {
     : { queryKey: key }
 }
 
+import { getDownloadApiBaseUrl } from './downloadApi.js'
+
+async function fetchJsonWithTimeout(url, headers = {}, timeoutMs = 10000) {
+  const controller = new AbortController()
+  const timeout = window.setTimeout(() => controller.abort(), timeoutMs)
+  try {
+    const response = await fetch(url, {
+      headers,
+      signal: controller.signal,
+      cache: 'no-store',
+    })
+    const payload = await response.json().catch(() => null)
+    if (!response.ok) {
+      const detail = payload?.status_message || payload?.message
+      const error = new Error(
+        response.status === 401 || response.status === 403
+          ? 'TMDB authentication failed. Check the v3 API key or v4 Read Access Token in Settings.'
+          : detail || `TMDB request failed (HTTP ${response.status}).`
+      )
+      error.status = response.status
+      throw error
+    }
+    return payload
+  } catch (error) {
+    if (error?.name === 'AbortError') {
+      const timeoutError = new Error('TMDB connection timed out.')
+      timeoutError.networkFailure = true
+      throw timeoutError
+    }
+    if (error instanceof TypeError) {
+      const networkError = new Error('Could not connect to TMDB.')
+      networkError.networkFailure = true
+      throw networkError
+    }
+    throw error
+  } finally {
+    window.clearTimeout(timeout)
+  }
+}
+
+function makeProxyUrl(path, directUrl) {
+  const backend = getDownloadApiBaseUrl()
+  if (!backend) return null
+  const cleanPath = String(path || '').replace(/^\\/+/, '')
+  const proxyUrl = new URL(`tmdb/${cleanPath}`, `${backend.replace(/\\/+$/, '')}/`)
+  directUrl.searchParams.forEach((value, key) => proxyUrl.searchParams.set(key, value))
+  return proxyUrl
+}
+
+async function fetchTmdb(path, directUrl, headers = {}, timeoutMs = 10000) {
+  try {
+    return await fetchJsonWithTimeout(directUrl, headers, timeoutMs)
+  } catch (directError) {
+    // Never retry invalid credentials through the proxy. Only connection and upstream failures
+    // are recoverable by moving the request off the visitor's network.
+    const retryable = directError?.networkFailure || directError?.status >= 500 || directError?.status === 429
+    const proxyUrl = retryable ? makeProxyUrl(path, directUrl) : null
+    if (!proxyUrl) {
+      if (directError?.networkFailure) {
+        throw new Error('The browser cannot reach api.themoviedb.org. Configure the Download Backend URL in Settings to retry TMDB through the server.')
+      }
+      throw directError
+    }
+
+    try {
+      return await fetchJsonWithTimeout(proxyUrl, headers, 18000)
+    } catch (proxyError) {
+      throw new Error(`TMDB direct connection failed and the server proxy could not complete the request: ${proxyError.message}`)
+    }
+  }
+}
+
 async function request(path, params = {}) {
   const credential = tmdbApiKey
   if (!credential) {
@@ -68,29 +140,7 @@ async function request(path, params = {}) {
     }
   })
 
-  const controller = new AbortController()
-  const timeout = window.setTimeout(() => controller.abort(), 15000)
-  try {
-    const res = await fetch(url, {
-      ...(auth.headers ? { headers: auth.headers } : {}),
-      signal: controller.signal,
-      cache: 'no-store',
-    })
-    const payload = await res.json().catch(() => null)
-    if (!res.ok) {
-      const detail = payload?.status_message || payload?.message
-      if (res.status === 401 || res.status === 403) {
-        throw new Error('TMDB authentication failed. Check the v3 API key or v4 Read Access Token in Settings.')
-      }
-      throw new Error(detail || `TMDB request failed (HTTP ${res.status}).`)
-    }
-    return payload
-  } catch (error) {
-    if (error?.name === 'AbortError') throw new Error('TMDB request timed out. Check your connection and try again.')
-    throw error
-  } finally {
-    window.clearTimeout(timeout)
-  }
+  return fetchTmdb(path, url, auth.headers || {}, 8000)
 }
 
 export async function validateTmdbApiKey(value) {
@@ -100,17 +150,12 @@ export async function validateTmdbApiKey(value) {
   const url = new URL(`${API_BASE}/configuration`)
   const auth = requestAuth(credential)
   if (auth.queryKey) url.searchParams.set('api_key', auth.queryKey)
-  const controller = new AbortController()
-  const timeout = window.setTimeout(() => controller.abort(), 12000)
   try {
-    const response = await fetch(url, {
-      ...(auth.headers ? { headers: auth.headers } : {}),
-      signal: controller.signal,
-      cache: 'no-store',
-    })
-    return response.ok
-  } finally {
-    window.clearTimeout(timeout)
+    await fetchTmdb('/configuration', url, auth.headers || {}, 8000)
+    return true
+  } catch (error) {
+    if (error?.status === 401 || error?.status === 403) return false
+    throw error
   }
 }
 
