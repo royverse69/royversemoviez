@@ -19,7 +19,14 @@ export const POSTER_PLACEHOLDER =
     `<svg xmlns="http://www.w3.org/2000/svg" width="500" height="750"><rect width="100%" height="100%" fill="#1c1c1c"/><g fill="#e50914" transform="translate(250,375)"><rect x="-34" y="-22" width="12" height="44" rx="2"/><rect x="-14" y="-14" width="12" height="36" rx="2"/><rect x="6" y="-26" width="12" height="52" rx="2"/><rect x="26" y="-8" width="12" height="34" rx="2"/></g><text x="0" y="488" font-family="sans-serif" font-size="34" fill="#4a4a4a" text-anchor="middle">RoyverseMoviez</text></svg>`
   )
 
-const isAbsoluteUrl = (value) => /^https?:\\/\\//i.test(String(value || ''))
+const isAbsoluteUrl = (value) => {
+  try {
+    const parsed = new URL(String(value || ''))
+    return parsed.protocol === 'http:' || parsed.protocol === 'https:'
+  } catch {
+    return false
+  }
+}
 
 export const backdropUrl = (path) =>
   path ? (isAbsoluteUrl(path) ? path : `${IMG_BASE}/w1280${path}`) : null
