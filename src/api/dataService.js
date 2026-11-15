@@ -220,6 +220,22 @@ export async function getGenreTitles(genreId, page = 1) {
   return sortByPopularity(uniqueByKey(all))
 }
 
+async function fetchJsonWithTimeout(url, options = {}, timeoutMs = 6500) {
+  const controller = new AbortController()
+  const timer = setTimeout(() => controller.abort(), timeoutMs)
+  try {
+    const response = await fetch(url, {
+      ...options,
+      signal: controller.signal,
+      cache: 'no-store',
+    })
+    if (!response.ok) throw new Error(`Request failed (${response.status})`)
+    return await response.json()
+  } finally {
+    clearTimeout(timer)
+  }
+}
+
 async function searchOmdbTitles(query, apiKey, page = 1) {
   if (!apiKey) return []
   const url = new URL('https://www.omdbapi.com/')
@@ -227,9 +243,7 @@ async function searchOmdbTitles(query, apiKey, page = 1) {
   url.searchParams.set('s', query)
   url.searchParams.set('type', 'movie')
   url.searchParams.set('page', String(page))
-  const response = await fetch(url.toString())
-  if (!response.ok) throw new Error(`OMDb search failed (${response.status})`)
-  const body = await response.json()
+  const body = await fetchJsonWithTimeout(url.toString())
   if (body.Response === 'False') return []
   return (body.Search || []).map((item) => ({
     imdbId: item.imdbID,
@@ -241,11 +255,9 @@ async function searchOmdbTitles(query, apiKey, page = 1) {
 async function searchTvmazeTitles(query) {
   const url = new URL('https://api.tvmaze.com/search/shows')
   url.searchParams.set('q', query)
-  const response = await fetch(url.toString(), {
-    headers: { 'accept': 'application/json' },
+  const body = await fetchJsonWithTimeout(url.toString(), {
+    headers: { accept: 'application/json' },
   })
-  if (!response.ok) throw new Error(`TVmaze search failed (${response.status})`)
-  const body = await response.json()
   return (body || []).slice(0, 8).map((item) => ({
     imdbId: item.show?.externals?.imdb,
     title: item.show?.name,
@@ -270,7 +282,131 @@ async function resolveFallbackTitles(candidates) {
   return sortByPopularity(uniqueByKey(resolved.flat()))
 }
 
-export async function searchMedia(query, page = 1, { omdbApiKey = '' } = {}) {
+async function searchTraktTitles(query, clientId, page = 1) {
+  if (!clientId) throw new Error('Trakt Client ID is not configured')
+  const url = new URL('https://api.trakt.tv/search/movie,show')
+  url.searchParams.set('query', query)
+  url.searchParams.set('page', String(page))
+  url.searchParams.set('limit', '10')
+  const rows = await fetchJsonWithTimeout(url.toString(), {
+    headers: {
+      'trakt-api-version': '2',
+      'trakt-api-key': clientId,
+      accept: 'application/json',
+    },
+  })
+  const candidates = (rows || []).map((row) => {
+    const type = row.type === 'show' ? 'tv' : row.type === 'movie' ? 'movie' : null
+    const item = type === 'tv' ? row.show : row.movie
+    const tmdbId = item?.ids?.tmdb
+    if (!type || !tmdbId) return null
+    const title = item.title || item.name || 'Untitled'
+    const date = item.year ? String(item.year) : ''
+    return {
+      id: String(tmdbId),
+      key: `${type}-${tmdbId}`,
+      mediaType: type,
+      title,
+      overview: '',
+      backdrop: null,
+      poster: null,
+      rating: Number(item.rating) || 0,
+      votes: 0,
+      date,
+      year: date,
+      genreIds: [],
+      popularity: Number(row.score) || 0,
+      genres: [],
+      runtime: null,
+      seasons: null,
+      numberOfEpisodes: null,
+      imdbId: item.ids?.imdb || null,
+    }
+  }).filter(Boolean)
+  if (!candidates.length) throw new Error('Trakt returned no TMDB-linked titles')
+  return sortByPopularity(uniqueByKey(candidates))
+}
+
+const STREAMX_BASES = [
+  'https://api.streamx.qzz.io',
+  'https://streamx-api.pages.dev',
+]
+
+async function fetchFastestStreamXSearch(query, mediaType, page = 1) {
+  const type = mediaType === 'tv' ? 'series' : 'movie'
+  const skip = Math.max(0, (page - 1) * 10)
+  const requests = STREAMX_BASES.map(async (base) => {
+    const url = new URL('/search', base)
+    url.searchParams.set('q', query)
+    url.searchParams.set('type', type)
+    url.searchParams.set('skip', String(skip))
+    const data = await fetchJsonWithTimeout(url.toString(), {}, 6500)
+    if (!Array.isArray(data.metas)) throw new Error('StreamX returned an invalid search response')
+    return { base, metas: data.metas }
+  })
+  const result = await Promise.any(requests)
+  return result
+}
+
+async function searchStreamXTitles(query, page = 1) {
+  const [movieSearch, seriesSearch] = await Promise.allSettled([
+    fetchFastestStreamXSearch(query, 'movie', page),
+    fetchFastestStreamXSearch(query, 'tv', page),
+  ])
+  const sources = [
+    ...(movieSearch.status === 'fulfilled' ? [{ ...movieSearch.value, type: 'movie' }] : []),
+    ...(seriesSearch.status === 'fulfilled' ? [{ ...seriesSearch.value, type: 'series' }] : []),
+  ]
+  if (!sources.length) throw new Error('StreamX search endpoints are unavailable')
+
+  const candidates = sources.flatMap((source) =>
+    source.metas.slice(0, 6).map((item) => ({ ...item, sourceBase: source.base, sourceType: source.type }))
+  )
+
+  const mapped = await Promise.all(candidates.map(async (item) => {
+    const url = new URL(`/meta/${item.sourceType}/${encodeURIComponent(item.id)}`, item.sourceBase)
+    url.searchParams.set('enrich', '1')
+    try {
+      const data = await fetchJsonWithTimeout(url.toString(), {}, 7500)
+      const meta = data.meta || {}
+      const tmdbId = meta.externalIds?.tmdb || meta.moviedb_id
+      if (!tmdbId) return null
+      const mediaType = item.sourceType === 'series' ? 'tv' : 'movie'
+      const date = String(meta.releaseInfo || item.releaseInfo || '')
+      return {
+        id: String(tmdbId),
+        key: `${mediaType}-${tmdbId}`,
+        mediaType,
+        title: meta.name || item.name || item.title || 'Untitled',
+        overview: meta.description || '',
+        backdrop: meta.images?.background?.large || meta.background || item.background || null,
+        poster: meta.images?.poster?.medium || meta.poster || item.poster || null,
+        rating: Number(meta.imdbRating ?? item.imdbRating) || 0,
+        votes: 0,
+        date,
+        year: (date.match(/\\b(19|20)\\d{2}\\b/) || [])[0] || '',
+        genreIds: [],
+        popularity: Number(item.rank ? 100000 - item.rank : 0) || 0,
+        genres: Array.isArray(meta.genres) ? meta.genres : Array.isArray(item.genres) ? item.genres : [],
+        runtime: Number(meta.runtime) || null,
+        seasons: Array.isArray(meta.seasons) ? meta.seasons.map((season, index) => ({
+          season_number: Number(season.number ?? season.season ?? index + 1),
+          name: season.name || `Season ${index + 1}`,
+        })) : null,
+        numberOfEpisodes: Array.isArray(meta.videos) ? meta.videos.length : null,
+        imdbId: meta.externalIds?.imdb || item.id || null,
+      }
+    } catch {
+      return null
+    }
+  }))
+
+  const results = sortByPopularity(uniqueByKey(mapped.filter(Boolean)))
+  if (!results.length) throw new Error('StreamX returned titles but none could be mapped to playable TMDB IDs')
+  return results
+}
+
+export async function searchMedia(query, page = 1, { omdbApiKey = '', traktClientId = '' } = {}) {
   const cleanQuery = String(query || '').trim()
   if (!cleanQuery) return []
   if (!hasApiKey()) return mockSearch(cleanQuery)
@@ -285,13 +421,11 @@ export async function searchMedia(query, page = 1, { omdbApiKey = '' } = {}) {
     const titles = results
       .filter((item) => item.media_type === 'movie' || item.media_type === 'tv')
       .map((item) => normalizeMedia(item))
-    if (titles.length || !cleanQuery) return sortByPopularity(uniqueByKey(titles))
+    if (titles.length) return sortByPopularity(uniqueByKey(titles))
   } catch (error) {
     primaryError = error
   }
 
-  // Same-provider endpoint fallback: multi-search can fail independently of
-  // the movie and TV search endpoints.
   try {
     const [movies, shows] = await Promise.all([
       api.list(requests.searchMovie, { query: cleanQuery, page, include_adult: false }, { includeUnrated: true }),
@@ -306,26 +440,30 @@ export async function searchMedia(query, page = 1, { omdbApiKey = '' } = {}) {
     primaryError = error
   }
 
-  // Independent metadata fallbacks. TVmaze is keyless; OMDb is enabled only
-  // when a user supplies their own key. Both expose IMDb IDs, which are
-  // resolved back to TMDB IDs so the existing title/player route stays valid.
-  const [tvmazeResult, omdbResult] = await Promise.allSettled([
-    searchTvmazeTitles(cleanQuery),
-    searchOmdbTitles(cleanQuery, omdbApiKey, page),
-  ])
-  const fallbackCandidates = [
-    ...(tvmazeResult.status === 'fulfilled' ? tvmazeResult.value : []),
-    ...(omdbResult.status === 'fulfilled' ? omdbResult.value : []),
+  // When TMDB's search endpoints fail, run independent sources in parallel.
+  // The first source to return playable TMDB IDs wins, so the app adapts to
+  // real-world response speed instead of assuming one static fallback is fastest.
+  const fallbackTasks = [
+    searchStreamXTitles(cleanQuery, page),
+    searchTvmazeTitles(cleanQuery).then(resolveFallbackTitles),
+    searchOmdbTitles(cleanQuery, omdbApiKey, page).then(resolveFallbackTitles),
   ]
-  const fallbackTitles = await resolveFallbackTitles(fallbackCandidates)
-  if (fallbackTitles.length) return fallbackTitles
+  if (traktClientId) fallbackTasks.push(searchTraktTitles(cleanQuery, traktClientId, page))
 
-  const fallbackErrors = [tvmazeResult, omdbResult]
-    .filter((result) => result.status === 'rejected')
-    .map((result) => result.reason?.message)
-    .filter(Boolean)
-  const detail = fallbackErrors.length ? ` Metadata fallbacks: ${fallbackErrors.join('; ')}.` : ''
-  throw new Error(`TMDB search is temporarily unavailable and no fallback result could be resolved to a playable TMDB title.${detail} ${primaryError?.message || ''}`.trim())
+  const fallbackErrors = []
+  const attempts = fallbackTasks.map((task) => task.then((results) => {
+    if (!Array.isArray(results) || !results.length) throw new Error('No playable titles returned')
+    return results
+  }).catch((error) => {
+    fallbackErrors.push(error?.message || String(error))
+    throw error
+  }))
+  try {
+    return await Promise.any(attempts)
+  } catch {
+    const detail = fallbackErrors.length ? ` Fallbacks: ${fallbackErrors.join('; ')}.` : ''
+    throw new Error(`The catalogue search is unavailable. No metadata provider returned a playable title.${detail} ${primaryError?.message || ''}`.trim())
+  }
 }
 
 export async function getVideo(mediaType, id) {
