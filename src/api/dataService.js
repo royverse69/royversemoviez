@@ -384,7 +384,7 @@ async function searchStreamXTitles(query, page = 1) {
         rating: Number(meta.imdbRating ?? item.imdbRating) || 0,
         votes: 0,
         date,
-        year: (date.match(/\\b(19|20)\\d{2}\\b/) || [])[0] || '',
+        year: (date.match(/\b(19|20)\d{2}\b/) || [])[0] || '',
         genreIds: [],
         popularity: Number(item.rank ? 100000 - item.rank : 0) || 0,
         genres: Array.isArray(meta.genres) ? meta.genres : Array.isArray(item.genres) ? item.genres : [],
