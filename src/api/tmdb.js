@@ -1,4 +1,5 @@
 import { API_BASE, IMG_BASE, requests } from '../data/requests.js'
+import { getDownloadApiBaseUrl } from './downloadApi.js'
 
 // Public TMDB key baked in at build/deploy time so users need no setup.
 // VITE_TMDB_API_KEY and the in-app Settings page can override it.
@@ -52,8 +53,6 @@ function requestAuth(key) {
     : { queryKey: key }
 }
 
-import { getDownloadApiBaseUrl } from './downloadApi.js'
-
 async function fetchJsonWithTimeout(url, headers = {}, timeoutMs = 10000) {
   const controller = new AbortController()
   const timeout = window.setTimeout(() => controller.abort(), timeoutMs)
@@ -95,8 +94,10 @@ async function fetchJsonWithTimeout(url, headers = {}, timeoutMs = 10000) {
 function makeProxyUrl(path, directUrl) {
   const backend = getDownloadApiBaseUrl()
   if (!backend) return null
-  const cleanPath = String(path || '').replace(/^\\/+/, '')
-  const proxyUrl = new URL(`tmdb/${cleanPath}`, `${backend.replace(/\\/+$/, '')}/`)
+  const cleanPath = String(path || '').split('/').filter(Boolean).join('/')
+  let backendBase = String(backend).trim()
+  while (backendBase.endsWith('/')) backendBase = backendBase.slice(0, -1)
+  const proxyUrl = new URL(`tmdb/${cleanPath}`, `${backendBase}/`)
   directUrl.searchParams.forEach((value, key) => proxyUrl.searchParams.set(key, value))
   return proxyUrl
 }
@@ -108,7 +109,9 @@ async function fetchTmdb(path, directUrl, headers = {}, timeoutMs = 10000) {
     // Never retry invalid credentials through the proxy. Only connection and upstream failures
     // are recoverable by moving the request off the visitor's network.
     const retryable = directError?.networkFailure || directError?.status >= 500 || directError?.status === 429
-    const proxyUrl = retryable ? makeProxyUrl(path, directUrl) : null
+  let backendBase = String(backend).trim()
+  while (backendBase.endsWith('/')) backendBase = backendBase.slice(0, -1)
+  const proxyUrl = new URL(`tmdb/${cleanPath}`, `${backendBase}/`)
     if (!proxyUrl) {
       if (directError?.networkFailure) {
         throw new Error('The browser cannot reach api.themoviedb.org. Configure the Download Backend URL in Settings to retry TMDB through the server.')
