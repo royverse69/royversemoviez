@@ -8,6 +8,11 @@ export const PROVIDERS = [
     origin: 'https://cinesrc.st',
   },
   {
+    id: 'moviebox-tui',
+    name: 'MovieBox-TUI (External App)',
+    externalApp: true,
+  },
+  {
     id: 'vidcore',
     name: 'VidCore (Backup)',
     movie: (id) => `https://vidcore.net/movie/${id}?autoPlay=true`,
@@ -32,5 +37,11 @@ export const getProvider = (id) => PROVIDERS.find((provider) => provider.id === 
 
 export function buildEmbedUrl(providerId, mediaType, id, season = 1, episode = 1) {
   const provider = getProvider(providerId)
+  // MovieBox-TUI is a native companion app, not an embeddable web player.
+  // Keep party/other iframe consumers on the normal primary web provider.
+  if (provider.externalApp) {
+    const fallback = getProvider(DEFAULT_PROVIDER)
+    return mediaType === 'tv' ? fallback.tv(id, season, episode) : fallback.movie(id)
+  }
   return mediaType === 'tv' ? provider.tv(id, season, episode) : provider.movie(id)
 }
