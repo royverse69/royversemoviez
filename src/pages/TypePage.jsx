@@ -19,7 +19,7 @@ export default function TypePage({ mediaType, sources, label }) {
   )
 
   return (
-    <div className="pb-10">
+    <div className="mobile-type-page pb-10">
       <FeaturedCarousel items={featured} label={label} />
       <div className="relative z-10 mt-4 space-y-10">
         {sources.map((source) => (
