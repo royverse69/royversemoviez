@@ -23,6 +23,7 @@ import { PROVIDERS, buildEmbedUrl } from '../data/providers.js'
 import { usePlayerBridge } from '../hooks/usePlayerBridge.js'
 import MovieCard from '../components/MovieCard.jsx'
 import PlayerEmbed from '../components/PlayerEmbed.jsx'
+import MovieBoxTuiHandoff from '../components/MovieBoxTuiHandoff.jsx'
 import {
   CheckIcon,
   ChevronLeftIcon,
@@ -585,17 +586,18 @@ function PlayerView({
   const lastWrittenRef = useRef(null)
   const resumedForRef = useRef(null)
   const fallbackAttemptedRef = useRef(new Set())
+  const movieBoxTuiSelected = providerId === 'moviebox-tui'
   const [resumeNotice, setResumeNotice] = useState(null)
   const [fallbackMessage, setFallbackMessage] = useState('')
 
   const contentPlayerUrl = useMemo(
-    () => mode === 'content' ? buildEmbedUrl(providerId, mediaType, id, season, episode) : null,
-    [mode, providerId, mediaType, id, season, episode]
+    () => mode === 'content' && !movieBoxTuiSelected ? buildEmbedUrl(providerId, mediaType, id, season, episode) : null,
+    [mode, providerId, mediaType, id, season, episode, movieBoxTuiSelected]
   )
   const bridge = usePlayerBridge({
     iframeRef: playerIframeRef,
     playerUrl: contentPlayerUrl,
-    active: mode === 'content',
+    active: mode === 'content' && !movieBoxTuiSelected,
   })
 
   useEffect(() => {
@@ -607,7 +609,7 @@ function PlayerView({
   }, [mode, providerId, bridge.error, contentPlayerUrl, setProvider])
 
   useEffect(() => {
-    if (mode !== 'content' || !bridge.ready || !contentPlayerUrl) return
+    if (mode !== 'content' || movieBoxTuiSelected || !bridge.ready || !contentPlayerUrl) return
     if (resumedForRef.current === contentPlayerUrl) return
     resumedForRef.current = contentPlayerUrl
     setResumeNotice(null)
@@ -625,10 +627,10 @@ function PlayerView({
     setResumeNotice(target)
     const timer = window.setTimeout(() => setResumeNotice(null), 6000)
     return () => window.clearTimeout(timer)
-  }, [mode, bridge.ready, contentPlayerUrl, media.key, mediaType, season, episode, bridge.seek, bridge.play])
+  }, [mode, movieBoxTuiSelected, bridge.ready, contentPlayerUrl, media.key, mediaType, season, episode, bridge.seek, bridge.play])
 
   useEffect(() => {
-    if (mode !== 'content') return
+    if (mode !== 'content' || movieBoxTuiSelected) return
     const seasonNumber = mediaType === 'tv' ? season : null
     const episodeNumber = mediaType === 'tv' ? episode : null
     const write = () => {
@@ -643,15 +645,15 @@ function PlayerView({
       window.clearInterval(timer)
       write()
     }
-  }, [mode, bridge.getState, media.key, mediaType, season, episode, updatePosition])
+  }, [mode, movieBoxTuiSelected, bridge.getState, media.key, mediaType, season, episode, updatePosition])
 
   useEffect(() => {
-    if (providerId === 'cinesrc' && bridge.ready) bridge.refresh()
-  }, [providerId, bridge.ready, bridge.refresh])
+    if (!movieBoxTuiSelected && providerId === 'cinesrc' && bridge.ready) bridge.refresh()
+  }, [providerId, movieBoxTuiSelected, bridge.ready, bridge.refresh])
 
   useEffect(() => {
-    if (bridge.closed) onClose()
-  }, [bridge.closed, onClose])
+    if (bridge.closed && !movieBoxTuiSelected) onClose()
+  }, [bridge.closed, movieBoxTuiSelected, onClose])
 
   useEffect(() => {
     const onKey = (event) => {
@@ -756,7 +758,9 @@ function PlayerView({
           </div>
         )}
 
-        {mode === 'trailer' && trailerUrl ? (
+        {mode === 'content' && movieBoxTuiSelected ? (
+          <MovieBoxTuiHandoff title={media.title} mediaType={mediaType} />
+        ) : mode === 'trailer' && trailerUrl ? (
           <iframe
             src={trailerUrl}
             title={`${media.title} trailer`}
