@@ -37,9 +37,9 @@ export default function FeaturedCarousel({ items, label }) {
 
   return (
     <section
-      className="relative z-30 h-[68svh] min-h-[550px] max-h-[760px] w-full overflow-hidden sm:h-[84svh] sm:min-h-[680px] sm:max-h-[900px]"
+      className="mobile-featured-carousel relative z-30 h-[68svh] min-h-[550px] max-h-[760px] w-full overflow-hidden sm:h-[84svh] sm:min-h-[680px] sm:max-h-[900px]"
     >
-      <div className="no-scrollbar absolute inset-x-0 top-[4.35rem] z-40 flex gap-2 overflow-x-auto px-3 sm:hidden">
+      <div className="mobile-genre-chips no-scrollbar absolute inset-x-0 top-[4.35rem] z-40 flex gap-2 overflow-x-auto px-3 sm:hidden">
         {[
           { label: 'Trending', path: '/' },
           { label: 'Movies', path: '/movies' },
@@ -88,11 +88,11 @@ export default function FeaturedCarousel({ items, label }) {
                 }`}
               />
               <img
-                src={posterUrl(media.poster, 'w500')}
+                src={bg || posterUrl(media.poster, 'w500')}
                 alt=""
                 loading={index === 0 ? 'eager' : 'lazy'}
                 onLoad={() => markImgLoaded(media.key)}
-                className={`absolute inset-0 h-full w-full object-cover object-top transition-opacity duration-1000 sm:hidden ${
+                className={`absolute inset-0 h-full w-full object-cover object-center transition-opacity duration-1000 sm:hidden ${
                   loaded ? 'opacity-100' : 'opacity-0'
                 }`}
               />
@@ -104,7 +104,7 @@ export default function FeaturedCarousel({ items, label }) {
             {/* Foreground */}
             <div className="relative z-10 mx-auto flex h-full w-full max-w-screen-2xl flex-col justify-end px-4 pb-10 pt-28 sm:px-6 sm:pb-16 sm:pt-36 lg:px-10">
               <div
-                className={`max-w-2xl transition-opacity duration-1000 ease-in-out ${
+                className={`mobile-featured-info max-w-2xl transition-opacity duration-1000 ease-in-out ${
                   isActive && loaded ? 'opacity-100' : 'opacity-0'
                 }`}
               >
