@@ -62,6 +62,9 @@ export default function Footer() {
           <p className="mt-2 text-[10px] leading-relaxed text-mist/65">
             Optional search fallbacks include Trakt and StreamX; fallback results are mapped back to TMDB IDs before they can open in the player. StreamX is an independent community project, not a streaming host.
           </p>
+          <p className="mt-2 text-[10px] leading-relaxed text-mist/65">
+            Trakt is used as an optional title-search source. RoyverseMoviez is not endorsed, certified or sponsored by Trakt.
+          </p>
           <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-[10px] font-semibold text-mist/70">
             <a href="https://www.tvmaze.com/" target="_blank" rel="noreferrer" className="hover:text-white">TVmaze ↗</a>
             <a href="https://www.trakt.tv/" target="_blank" rel="noreferrer" className="hover:text-white">Trakt ↗</a>
