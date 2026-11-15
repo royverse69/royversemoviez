@@ -11,6 +11,7 @@ on:
 
 permissions:
   contents: read
+  actions: write
 
 concurrency:
   group: royversemoviez-party-worker
@@ -28,27 +29,61 @@ jobs:
         with:
           node-version: 20
 
-      - name: Check Cloudflare deployment credentials
-        id: cloudflare
+      - name: Require Cloudflare deployment credentials
         shell: bash
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: |
-          if [ -n "$CLOUDFLARE_API_TOKEN" ] && [ -n "$CLOUDFLARE_ACCOUNT_ID" ]; then
-            echo "configured=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "configured=false" >> "$GITHUB_OUTPUT"
+          if [ -z "$CLOUDFLARE_API_TOKEN" ] || [ -z "$CLOUDFLARE_ACCOUNT_ID" ]; then
+            echo "::error::Watch Party Worker is NOT deployed. Add CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID under GitHub Settings → Secrets and variables → Actions."
+            exit 1
           fi
+
+      - name: Deploy Durable Object Worker and capture URL
+        id: deployment
+        shell: bash
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-
-      - name: Deploy Durable Object Worker
-        if: steps.cloudflare.outputs.configured == 'true'
-        run: npx --yes wrangler@4 deploy --config server/wrangler.toml
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-
-      - name: Explain missing deployment secrets
-        if: steps.cloudflare.outputs.configured != 'true'
         run: |
-          echo "Worker deployment was skipped. Add CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID in GitHub Settings → Secrets and variables → Actions." >> "$GITHUB_STEP_SUMMARY"
+          set -o pipefail
+          OUTPUT="$(npx --yes wrangler@4 deploy --config server/wrangler.toml 2>&1)" || {
+            echo "$OUTPUT"
+            exit 1
+          }
+          echo "$OUTPUT"
+          WORKER_URL="$(printf '%s\n' "$OUTPUT" | grep -Eo 'https://[A-Za-z0-9.-]+\.workers\.dev' | tail -n 1)"
+          if [ -z "$WORKER_URL" ]; then
+            echo "::error::Wrangler deployed but did not print a workers.dev URL. Set VITE_PARTY_WS_URL manually in repository variables."
+            exit 1
+          fi
+          echo "worker_url=$WORKER_URL" >> "$GITHUB_OUTPUT"
+
+      - name: Verify Worker health
+        env:
+          WORKER_URL: ${{ steps.deployment.outputs.worker_url }}
+        run: |
+          for attempt in 1 2 3 4 5; do
+            if curl --fail --silent --show-error "$WORKER_URL/health"; then
+              exit 0
+            fi
+            sleep 3
+          done
+          echo "::error::Worker deployed, but /health did not confirm the PARTY_ROOMS binding."
+          exit 1
+
+      - name: Publish Worker URL for Pages build
+        env:
+          GH_TOKEN: ${{ github.token }}
+          WORKER_URL: ${{ steps.deployment.outputs.worker_url }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          gh variable set VITE_PARTY_WS_URL --body "$WORKER_URL" --repo "$GH_REPO"
+          echo "Saved VITE_PARTY_WS_URL=$WORKER_URL as a repository variable."
+
+      - name: Rebuild Pages with the live Worker URL
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: gh workflow run deploy.yml --ref main --repo "$GH_REPO"
