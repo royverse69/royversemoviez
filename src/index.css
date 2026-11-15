@@ -164,3 +164,336 @@ select option {
 input, textarea, select {
   font-size: max(16px, 1em);
 }
+
+
+/* RoyverseMoviez mobile app shell — desktop styles remain untouched */
+@media (max-width: 767px) {
+  html, body, #root {
+    min-height: 100%;
+    overflow-x: clip;
+    background: #080808;
+  }
+
+  body {
+    padding-bottom: env(safe-area-inset-bottom);
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .site-mobile-header {
+    background: linear-gradient(180deg, rgba(0,0,0,.94) 0%, rgba(0,0,0,.78) 72%, transparent 100%);
+    box-shadow: none;
+    backdrop-filter: blur(14px);
+  }
+
+  .site-mobile-header nav {
+    min-height: 54px;
+    padding: 8px 13px;
+    gap: 5px;
+  }
+
+  .site-mobile-header nav > a:first-child {
+    gap: 7px;
+  }
+
+  .site-mobile-header nav > a:first-child span {
+    font-size: 16px;
+    letter-spacing: -.045em;
+  }
+
+  .site-mobile-header nav > div:last-child {
+    gap: 4px;
+  }
+
+  .site-mobile-header nav > div:last-child > a,
+  .site-mobile-header nav > div:last-child > button {
+    width: 35px;
+    height: 35px;
+    display: grid;
+    place-items: center;
+    padding: 0;
+  }
+
+  .mobile-bottom-nav {
+    height: calc(58px + env(safe-area-inset-bottom));
+    padding: 4px 5px calc(4px + env(safe-area-inset-bottom));
+    background: rgba(8,8,8,.97);
+    border-color: rgba(255,255,255,.1);
+    box-shadow: 0 -10px 28px rgba(0,0,0,.38);
+  }
+
+  .mobile-bottom-nav a {
+    min-height: 48px;
+    border-radius: 9px;
+    gap: 3px;
+    letter-spacing: -.01em;
+  }
+
+  .mobile-bottom-nav a[aria-current="page"] {
+    color: #fff;
+  }
+
+  .mobile-bottom-nav a[aria-current="page"] svg {
+    stroke: #e50914;
+    stroke-width: 2.2;
+  }
+
+  .mobile-featured-carousel {
+    height: 68svh;
+    min-height: 480px;
+    max-height: 650px;
+  }
+
+  .mobile-featured-carousel .mobile-hero-art {
+    object-position: center 25%;
+    transform: scale(1.015);
+  }
+
+  .mobile-featured-carousel .hero-gradient {
+    background: linear-gradient(
+      180deg,
+      rgba(0,0,0,.32) 0%,
+      rgba(0,0,0,.08) 23%,
+      rgba(0,0,0,.08) 48%,
+      rgba(8,8,8,.72) 72%,
+      #080808 100%
+    );
+  }
+
+  .mobile-genre-chips {
+    top: 60px;
+    gap: 8px;
+    padding: 0 14px;
+    scrollbar-width: none;
+  }
+
+  .mobile-genre-chips button {
+    min-height: 30px;
+    border: 1px solid rgba(255,255,255,.65);
+    border-radius: 999px;
+    padding: 5px 13px;
+    background: rgba(15,15,15,.52);
+    color: #fff;
+    font-size: 11px;
+    font-weight: 750;
+    white-space: nowrap;
+    box-shadow: none;
+    backdrop-filter: blur(12px);
+  }
+
+  .mobile-genre-chips button:first-child {
+    border-color: #fff;
+    background: #fff;
+    color: #080808;
+  }
+
+  .mobile-featured-info {
+    max-width: min(94vw, 420px);
+    padding-bottom: 26px;
+  }
+
+  .mobile-featured-info h1 {
+    max-width: 13ch;
+    font-size: clamp(28px, 8vw, 39px);
+    line-height: .98;
+    letter-spacing: -.045em;
+    text-wrap: balance;
+  }
+
+  .mobile-featured-info > p:not(:first-child) {
+    max-width: 36ch;
+    font-size: 12px;
+    line-height: 1.45;
+    color: rgba(255,255,255,.82);
+  }
+
+  .mobile-featured-info > div:last-child {
+    gap: 9px;
+    margin-top: 15px;
+  }
+
+  .mobile-featured-info > div:last-child button {
+    min-height: 39px;
+    padding: 8px 17px;
+    border-radius: 5px;
+    font-size: 12px;
+  }
+
+  .mobile-featured-carousel > div[aria-hidden="true"] {
+    touch-action: pan-y;
+  }
+
+  .mobile-featured-carousel .absolute.bottom-4 {
+    bottom: 9px;
+  }
+
+  .mobile-featured-carousel + .relative {
+    margin-top: 5px;
+  }
+
+  .mobile-featured-carousel ~ .relative {
+    gap: 24px;
+  }
+
+  .relative.-mx-1.px-3 > h2,
+  .relative.-mx-1.px-4 > div:first-child h2 {
+    font-size: 15px;
+    font-weight: 800;
+    letter-spacing: -.025em;
+  }
+
+  .relative.-mx-1.px-3 > div > div.no-scrollbar,
+  .relative.-mx-1.px-4 > div.no-scrollbar {
+    gap: 9px;
+    padding-top: 8px;
+    padding-bottom: 10px;
+  }
+
+  .movie-poster-card {
+    scroll-snap-align: start;
+  }
+
+  .movie-poster-card > div:first-child {
+    border-radius: 5px !important;
+    box-shadow: 0 6px 18px rgba(0,0,0,.42);
+    ring: none;
+  }
+
+  .movie-poster-card > div:nth-child(2) {
+    min-height: 48px;
+    padding-top: 7px;
+  }
+
+  .movie-poster-card h3 {
+    font-size: 11px;
+    line-height: 1.35;
+    font-weight: 750;
+  }
+
+  .movie-poster-card > div:nth-child(2) > div {
+    gap: 5px;
+    margin-top: 4px;
+    font-size: 9px;
+  }
+
+  .home-history-card .movie-poster-card > div:first-child {
+    aspect-ratio: 16 / 9 !important;
+    border-radius: 6px !important;
+  }
+
+  .home-history-card .movie-poster-card > div:nth-child(2) {
+    min-height: 38px;
+  }
+
+  .home-history-card .movie-poster-card h3 {
+    font-size: 12px;
+  }
+
+  .mobile-search-page,
+  .mobile-library-page,
+  .mobile-watch-detail-page,
+  .mobile-settings-page,
+  .mobile-type-page,
+  .mobile-downloads-page {
+    padding-top: 76px;
+    padding-left: 14px;
+    padding-right: 14px;
+  }
+
+  .mobile-search-page h1,
+  .mobile-library-page h1,
+  .mobile-settings-page h1,
+  .mobile-downloads-page h1 {
+    margin-bottom: 16px;
+    font-size: 23px;
+    letter-spacing: -.04em;
+  }
+
+  .mobile-search-page input[type="search"] {
+    min-height: 46px;
+    border-radius: 7px;
+    border-color: rgba(255,255,255,.22);
+    background: #171717;
+    font-size: 16px;
+  }
+
+  .mobile-search-page .grid {
+    gap: 10px;
+  }
+
+  .mobile-library-page .grid {
+    gap: 10px;
+  }
+
+  .mobile-watch-detail-page {
+    padding-top: 0;
+  }
+
+  .mobile-watch-detail-page .mobile-detail-hero {
+    min-height: 64svh;
+    align-items: flex-end;
+    padding-bottom: 22px;
+    padding-top: 96px;
+  }
+
+  .mobile-type-page {
+    padding-top: 0;
+  }
+
+  .mobile-type-page > .relative,
+  .mobile-watch-detail-page .relative.z-10 {
+    gap: 24px;
+  }
+
+  .mobile-downloads-page {
+    padding-top: 76px;
+  }
+
+  .mobile-downloads-page .relative.min-h-\[calc\(100dvh-8rem\)\] {
+    min-height: auto;
+  }
+
+  .watch-player-shell {
+    width: 100vw !important;
+    max-width: 100vw !important;
+    height: auto !important;
+    aspect-ratio: 16 / 9 !important;
+    margin-inline: calc(50% - 50vw);
+    border-radius: 0 !important;
+  }
+
+  .watch-player-shell iframe {
+    width: 100%;
+    height: 100%;
+  }
+
+  .mobile-player-view {
+    padding-top: 0;
+  }
+
+  .mobile-player-title {
+    font-size: 12px;
+  }
+
+  .mobile-player-view .mobile-player-meta {
+    padding: 13px 15px;
+  }
+
+  select, input, textarea {
+    max-width: 100%;
+  }
+}
+
+@media (max-width: 380px) {
+  .mobile-featured-info h1 {
+    font-size: 28px;
+  }
+
+  .mobile-genre-chips button {
+    padding-inline: 10px;
+    font-size: 10px;
+  }
+
+  .mobile-bottom-nav a {
+    font-size: 8px;
+  }
+}
