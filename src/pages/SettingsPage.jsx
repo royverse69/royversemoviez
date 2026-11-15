@@ -104,7 +104,7 @@ export default function SettingsPage() {
       <div className="mt-6 rounded-2xl border border-white/12 bg-surface p-4 sm:p-5">
         <div className="flex items-start justify-between gap-3">
           <div>
-            <h2 className="text-lg font-extrabold text-white">TMDB API Key</h2>
+            <h2 className="text-lg font-extrabold text-white">TMDB API Access</h2>
             <p className="mt-0.5 text-xs text-mist">Used for movie and series metadata</p>
           </div>
           <span
@@ -129,7 +129,7 @@ export default function SettingsPage() {
             type={showKey ? 'text' : 'password'}
             value={draft}
             onChange={(e) => { setDraft(e.target.value); setMessage(null) }}
-            placeholder="Enter your TMDB v3 API key"
+            placeholder="TMDB v3 API key or v4 Read Access Token"
             autoCapitalize="none"
             autoComplete="off"
             spellCheck={false}
@@ -144,7 +144,7 @@ export default function SettingsPage() {
         </div>
 
         <p className="mt-2 text-[10px] leading-relaxed text-mist">
-          Your key is stored only in this browser and sent directly to TMDB.
+          Your credential is stored only in this browser. Both TMDB v3 API keys and v4 Read Access Tokens are supported.
         </p>
 
         {message && (
